@@ -142,11 +142,11 @@ export function scoreLabel(score: number): string {
 }
 
 export function scoreColor(score: number): string {
-  if (score >= 80) return "text-amber-600 dark:text-amber-400";
-  if (score >= 65) return "text-orange-500 dark:text-orange-400";
-  if (score >= 45) return "text-yellow-600 dark:text-yellow-500";
-  if (score >= 25) return "text-stone-500 dark:text-stone-400";
-  return "text-slate-400 dark:text-slate-500";
+  if (score >= 80) return "text-orange-600 dark:text-orange-400";
+  if (score >= 65) return "text-yellow-600 dark:text-yellow-400";
+  if (score >= 45) return "text-yellow-500 dark:text-yellow-500";
+  if (score >= 25) return "text-stone-400 dark:text-stone-400";
+  return "text-gray-400 dark:text-gray-500";
 }
 
 export function scoreBg(score: number): string {
@@ -158,11 +158,10 @@ export function scoreBg(score: number): string {
 }
 
 export function hourBarColor(score: number): string {
-  if (score >= 80) return "bg-amber-400";
-  if (score >= 65) return "bg-amber-300";
+  if (score >= 80) return "bg-orange-600";
+  if (score >= 65) return "bg-yellow-500";
   if (score >= 45) return "bg-yellow-200";
-  if (score >= 25) return "bg-stone-200";
-  return "bg-slate-100 dark:bg-slate-700";
+  return "bg-gray-300";
 }
 
 // Find best consecutive window of `windowHours` with highest avg score

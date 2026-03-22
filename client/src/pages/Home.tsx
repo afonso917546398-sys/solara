@@ -54,40 +54,30 @@ function DayBars({ hours, sunrise, sunset }: {
       <div className="flex items-end gap-[2px] w-full" style={{ height: maxH }}>
         {dayHours.map(h => {
           const barH = Math.max(3, Math.round((h.sunScore / 100) * maxH));
-          // Warm-to-cool gradient: amber → orange → yellow → steel blue → slate
-          let bg = "#cbd5e1";       // slate-300  — no sun
-          if (h.sunScore >= 80)      bg = "#f59e0b"; // amber-400
-          else if (h.sunScore >= 65) bg = "#fb923c"; // orange-400
-          else if (h.sunScore >= 45) bg = "#fbbf24"; // amber-300 (warm yellow)
-          else if (h.sunScore >= 25) bg = "#7dd3fc"; // sky-300 (cool blue)
-          const showScore = h.sunScore >= 65;
+          // Consistent palette: matches scoreColor labels and hourBarColor
+          let bg = "#d1d5db";       // gray-300 — below threshold / no sun
+          if (h.sunScore >= 80)      bg = "#ea580c"; // orange-600 — Golden hour
+          else if (h.sunScore >= 65) bg = "#eab308"; // yellow-500 — Good sun
+          else if (h.sunScore >= 45) bg = "#fef08a"; // yellow-200 — Partial sun
+          const showLabel = h.sunScore >= 65;
           return (
-            <div key={h.hour} className="flex-1 rounded-sm relative flex items-end justify-center"
+            <div key={h.hour} className="flex-1 rounded-sm relative"
               style={{ height: barH, backgroundColor: bg }}>
-              {showScore && barH >= 14 && (
-                <span className="absolute inset-0 flex items-center justify-center"
-                  style={{ fontSize: 8, fontWeight: 700, color: 'rgba(0,0,0,0.55)', lineHeight: 1 }}>
-                  {h.sunScore}
+              {showLabel && barH >= 12 && (
+                <span className="absolute -bottom-[14px] left-1/2 -translate-x-1/2 whitespace-nowrap"
+                  style={{ fontSize: 8, fontWeight: 600, color: '#78716c', lineHeight: 1 }}>
+                  {h.timeLabel}
                 </span>
               )}
             </div>
           );
         })}
       </div>
-      {/* Time labels: sunrise, 12:00, sunset */}
-      <div className="relative w-full" style={{ height: 14 }}>
-        {/* Sunrise — left-aligned under first bar */}
+      {/* Time labels: sunrise and sunset only */}
+      <div className="relative w-full" style={{ height: 14, marginTop: 16 }}>
         <span className="absolute text-[10px] text-muted-foreground" style={{ left: 0 }}>
           {sunrise}
         </span>
-        {/* 12:00 — centred under noon bar */}
-        {noonIdx >= 0 && (
-          <span className="absolute text-[10px] text-muted-foreground"
-            style={{ left: `${((noonIdx + 0.5) / dayHours.length) * 100}%`, transform: 'translateX(-50%)' }}>
-            12:00
-          </span>
-        )}
-        {/* Sunset — right-aligned under last bar */}
         <span className="absolute text-[10px] text-muted-foreground" style={{ right: 0 }}>
           {sunset}
         </span>
@@ -532,11 +522,11 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
             <h3 className="font-semibold text-foreground mb-2">Score labels</h3>
             <div className="flex flex-col gap-1.5">
               {[
-                { label: "Golden hour", range: "80–100", color: "bg-amber-400", desc: "Optimal — all thresholds clear, strong sun" },
-                { label: "Good sun", range: "65–79", color: "bg-orange-400", desc: "Solid session, minor compromises" },
-                { label: "Partial sun", range: "45–64", color: "bg-yellow-300", desc: "Worth it but not ideal" },
-                { label: "Weak sun", range: "25–44", color: "bg-stone-300", desc: "Borderline — one or more thresholds are marginal" },
-                { label: "No sun", range: "0–24", color: "bg-slate-200", desc: "Does not qualify" },
+                { label: "Golden hour", range: "80–100", color: "bg-orange-600", desc: "Optimal — all thresholds clear, strong sun" },
+                { label: "Good sun", range: "65–79", color: "bg-yellow-500", desc: "Solid session, minor compromises" },
+                { label: "Partial sun", range: "45–64", color: "bg-yellow-200", desc: "Worth it but not ideal" },
+                { label: "Weak sun", range: "25–44", color: "bg-gray-300", desc: "Borderline — one or more thresholds are marginal" },
+                { label: "No sun", range: "0–24", color: "bg-gray-300", desc: "Does not qualify" },
               ].map(s => (
                 <div key={s.label} className="flex items-center gap-3">
                   <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.color}`} />
