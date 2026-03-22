@@ -114,7 +114,7 @@ function HourlyChart({ hours, peakWindow }: {
         {visible.map(h => (
           <div key={h.hour} className="flex-1 text-center">
             {h.hour % 2 === 0 && (
-              <span className="text-[9px] text-muted-foreground">{h.timeLabel}</span>
+              <span className="text-xs text-muted-foreground">{h.timeLabel}</span>
             )}
           </div>
         ))}
@@ -131,37 +131,37 @@ function HourRow({ h, isPeak, units }: { h: HourData; isPeak: boolean; units: Un
       ${isPeak ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40' : 'hover:bg-muted/50'}`}>
       {/* Top row: time + bar + score + badge */}
       <div className="flex items-center gap-3">
-        <span className={`w-12 font-mono text-xs shrink-0 ${isPeak ? 'font-bold text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+        <span className={`w-14 font-mono text-sm shrink-0 ${isPeak ? 'font-bold text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
           {h.timeLabel}
         </span>
-        <div className="flex-1 h-2 bg-border rounded-full overflow-hidden">
+        <div className="flex-1 h-2.5 bg-border rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all ${pct > 0 ? hourBarColor(pct) : ''}`}
             style={{ width: `${pct}%` }} />
         </div>
-        <span className={`text-xs font-bold w-8 text-right shrink-0 ${scoreColor(h.sunScore)}`}>
+        <span className={`text-sm font-bold w-8 text-right shrink-0 ${scoreColor(h.sunScore)}`}>
           {h.isDay ? h.sunScore : '—'}
         </span>
         {isPeak && (
-          <Badge className="text-[10px] h-4 px-1.5 shrink-0 bg-amber-500 text-white border-0">Peak</Badge>
+          <Badge className="text-xs h-4 px-1.5 shrink-0 bg-amber-500 text-white border-0">Peak</Badge>
         )}
       </div>
       {/* Raw variables row — only during daylight */}
       {h.isDay && (
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-[60px] text-[11px]">
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-[60px] text-xs">
           {/* Each value coloured red if below its threshold */}
           <span
             title={`Cloud cover — max ${THRESHOLDS.cloudMax}% to qualify`}
             className={`flex items-center gap-0.5 ${
               h.cloudCover > THRESHOLDS.cloudMax ? 'text-red-500 dark:text-red-400 font-medium' : 'text-muted-foreground'
             }`}>
-            <Cloud size={9} />{h.cloudCover}%
+            <Cloud size={11} />{h.cloudCover}%
           </span>
           <span
             title={`UV Index — min ${THRESHOLDS.uvMin} to qualify`}
             className={`flex items-center gap-0.5 ${
               h.uvIndex < THRESHOLDS.uvMin ? 'text-red-500 dark:text-red-400 font-medium' : 'text-muted-foreground'
             }`}>
-            <Sun size={9} />UV {h.uvIndex.toFixed(1)}
+            <Sun size={11} />UV {h.uvIndex.toFixed(1)}
           </span>
           <span
             title={`Direct radiation — min ${THRESHOLDS.radMin} W/m² to qualify`}
@@ -175,7 +175,7 @@ function HourRow({ h, isPeak, units }: { h: HourData; isPeak: boolean; units: Un
             className={`flex items-center gap-0.5 ${
               h.apparentTemp < THRESHOLDS.tempMin ? 'text-red-500 dark:text-red-400 font-medium' : 'text-muted-foreground'
             }`}>
-            <Thermometer size={9} />{fmtTemp(h.apparentTemp, units)} feels-like
+            <Thermometer size={11} />{fmtTemp(h.apparentTemp, units)} feels-like
           </span>
           <span
             title={`Wind — Beaufort 5 (${fmtWind(29, units)}) starts penalising score`}
@@ -185,7 +185,7 @@ function HourRow({ h, isPeak, units }: { h: HourData; isPeak: boolean; units: Un
               : h.windSpeed >= 29 ? 'text-yellow-600 dark:text-yellow-500 font-medium'
               : 'text-muted-foreground'
             }`}>
-            <Wind size={9} />{fmtWind(h.windSpeed, units)}
+            <Wind size={11} />{fmtWind(h.windSpeed, units)}
           </span>
           <span className="text-muted-foreground/50">({fmtTemp(h.temperature, units)} actual)</span>
         </div>
@@ -221,7 +221,7 @@ function ExposureWidget({ day, skinTypeId, onChangeSkin, units }: {
         <select
           value={skinTypeId}
           onChange={e => onChangeSkin(Number(e.target.value))}
-          className="text-[11px] text-muted-foreground bg-transparent border-none
+          className="text-xs text-muted-foreground bg-transparent border-none
             cursor-pointer hover:text-foreground transition-colors outline-none
             appearance-none pr-1"
           title="Change skin type"
@@ -258,7 +258,7 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
       >
         {/* Date */}
         <div className="min-w-[52px]">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             {day.isToday ? 'Today' : day.weekday}
           </div>
           <div className="text-sm font-medium text-foreground">{day.dateLabel}</div>
@@ -269,14 +269,14 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
 
         {/* Score label + peak window */}
         <div className="flex-1 min-w-0">
-          <div className={`text-sm font-bold ${scoreColor(day.dayScore)}`}>{day.scoreLabel}</div>
+          <div className={`text-base font-bold ${scoreColor(day.dayScore)}`}>{day.scoreLabel}</div>
           {peak && peak.score >= 40 ? (
-            <div className="text-xs text-muted-foreground mt-0.5">
+            <div className="text-sm text-muted-foreground mt-0.5">
               Go out: <span className="font-medium text-foreground">{peak.start}–{peak.end}</span>
               <span className={`ml-1.5 ${scoreColor(peak.score)}`}>({peak.score}/100)</span>
             </div>
           ) : (
-            <div className="text-xs text-muted-foreground mt-0.5">No qualifying sun window</div>
+            <div className="text-sm text-muted-foreground mt-0.5">No qualifying sun window</div>
           )}
           {/* Sunrise/sunset */}
           <div className="flex gap-3 mt-1.5 text-xs text-muted-foreground">
@@ -615,7 +615,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
                       dark:text-amber-300 px-2 py-0.5 rounded-full">{row.threshold}</span>
                   </div>
                   <p className="text-xs text-muted-foreground leading-relaxed">{row.why}</p>
-                  <p className="text-[10px] text-muted-foreground/60">Source: {row.source}</p>
+                  <p className="text-xs text-muted-foreground/60">Source: {row.source}</p>
                 </div>
               ))}
             </div>
@@ -639,7 +639,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-medium text-foreground">{row.range}</span>
                     <div className="flex items-center gap-2">
-                      <span className="text-[10px] text-muted-foreground">{row.beaufort}</span>
+                      <span className="text-xs text-muted-foreground">{row.beaufort}</span>
                       <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full text-foreground">{row.penalty}</span>
                     </div>
                   </div>
@@ -1065,7 +1065,7 @@ function AccuracySection({
                   ))}
                 </tbody>
               </table>
-              <div className="px-3 py-2 border-t border-border text-[10px] text-muted-foreground/60">
+              <div className="px-3 py-2 border-t border-border text-xs text-muted-foreground/60">
                 Actuals from Open-Meteo Historical API. Delta = actual − forecast (positive = under-predicted).
                 Forecast scores only available for days with check-ins.
               </div>
