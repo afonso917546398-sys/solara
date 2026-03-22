@@ -54,14 +54,23 @@ function DayBars({ hours, sunrise, sunset }: {
       <div className="flex items-end gap-[2px] w-full" style={{ height: maxH }}>
         {dayHours.map(h => {
           const barH = Math.max(3, Math.round((h.sunScore / 100) * maxH));
-          let bg = "bg-slate-200 dark:bg-slate-700";
-          if (h.sunScore >= 80) bg = "bg-amber-400";
-          else if (h.sunScore >= 65) bg = "bg-orange-300";
-          else if (h.sunScore >= 45) bg = "bg-yellow-200";
-          else if (h.sunScore >= 25) bg = "bg-stone-200 dark:bg-stone-600";
+          // Warm-to-cool gradient: amber → orange → yellow → steel blue → slate
+          let bg = "#cbd5e1";       // slate-300  — no sun
+          if (h.sunScore >= 80)      bg = "#f59e0b"; // amber-400
+          else if (h.sunScore >= 65) bg = "#fb923c"; // orange-400
+          else if (h.sunScore >= 45) bg = "#fbbf24"; // amber-300 (warm yellow)
+          else if (h.sunScore >= 25) bg = "#7dd3fc"; // sky-300 (cool blue)
+          const showScore = h.sunScore >= 65;
           return (
-            <div key={h.hour} className={`flex-1 rounded-sm ${bg}`}
-              style={{ height: barH }} />
+            <div key={h.hour} className="flex-1 rounded-sm relative flex items-end justify-center"
+              style={{ height: barH, backgroundColor: bg }}>
+              {showScore && barH >= 14 && (
+                <span className="absolute inset-0 flex items-center justify-center"
+                  style={{ fontSize: 8, fontWeight: 700, color: 'rgba(0,0,0,0.55)', lineHeight: 1 }}>
+                  {h.sunScore}
+                </span>
+              )}
+            </div>
           );
         })}
       </div>
