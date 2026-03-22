@@ -60,19 +60,22 @@ function SunDial({ hours, score, size = 72 }: {
   size?: number;
 }) {
   const cx = size / 2, cy = size / 2;
-  // Spiral: inner radius to outer radius, growing linearly each hour
-  const rMin = size * 0.14;  // centre hole
-  const rMax = size * 0.47;  // outer edge
-  const totalDepth = rMax - rMin;
-  // Each hour occupies one 15° slice but its radial depth grows
-  // We divide the full ring depth into 24 equal steps
-  const step = totalDepth / 24;
-  const gap = 1.2; // degrees gap between segments
+  const rMin = size * 0.14;
+  const rMax = size * 0.47;
+  const step = (rMax - rMin) / 24;
+  const gap = 1.2;
 
-  const segments = hours.map((h, _) => {
-    const i = h.hour;
+  // Clock mapping: hour 0 = 12-o-clock (0°), clockwise.
+  // Each hour occupies 15° (360/24).
+  // pXY already maps 0° → top (12-o-clock) via the -90 offset inside it.
+  const segments = Array.from({ length: 24 }, (_, i) => {
+    const h = hours.find(h => h.hour === i);
     const r1 = rMin + i * step;
     const r2 = rMin + (i + 1) * step;
+    // hour 0 starts at clock 12 (0°), hour 12 at clock 12 (180° = bottom? NO)
+    // Clock degrees: 0h → 0°, 3h → 45°, 6h → 90°, 9h → 135°,
+    //                12h → 180°, 15h → 225°, 18h → 270°, 21h → 315°
+    // Each hour = 15° clockwise from top.
     const a1 = i * 15 + gap / 2;
     const a2 = (i + 1) * 15 - gap / 2;
     const [x1, y1] = pXY(cx, cy, r1, a1);
@@ -80,44 +83,53 @@ function SunDial({ hours, score, size = 72 }: {
     const [x3, y3] = pXY(cx, cy, r2, a2);
     const [x4, y4] = pXY(cx, cy, r1, a2);
     const d = `M${x1},${y1} L${x2},${y2} A${r2},${r2} 0 0,1 ${x3},${y3} L${x4},${y4} A${r1},${r1} 0 0,0 ${x1},${y1}Z`;
-    const color = segColor(h.sunScore, h.isDay, false);
-    return { d, color, i };
+    return { d, color: segColor(h?.sunScore ?? 0, h?.isDay ?? 0, false), i };
   });
 
-  // Score text colour
   let tc = "#94a3b8";
   if (score >= 80) tc = "#f59e0b";
   else if (score >= 65) tc = "#fb923c";
   else if (score >= 45) tc = "#eab308";
   else if (score >= 25) tc = "#a8a29e";
 
-  // Landmark labels: 0h (top), 6h (right), 12h (bottom), 18h (left)
+  // Clock positions: 0/24h at top (0°), 3/15h at right (45°),
+  // 6/18h at bottom (90°), 9/21h at left (135°)
+  // In clock degrees (pXY maps 0° → 12-o-clock):
+  //   0h  → 0°   (top)
+  //   3h  → 45°  (upper right)  -- skip, too crowded
+  //   6h  → 90°  (right)
+  //   9h  → 135° (lower right) -- skip
+  //   12h → 180° (bottom)
+  //   15h → 225° (lower left) -- skip
+  //   18h → 270° (left)
+  //   21h → 315° (upper left) -- skip
   const landmarks = [
-    { hour: 0,  label: "0",  angle: 0   },
-    { hour: 6,  label: "6",  angle: 90  },
-    { hour: 12, label: "12", angle: 180 },
-    { hour: 18, label: "18", angle: 270 },
+    { label: "0·24", angle: 0   },
+    { label: "3·15", angle: 45  },
+    { label: "6·18", angle: 90  },
+    { label: "9·21", angle: 135 },
+    { label: "12",   angle: 180 },
+    { label: "15",   angle: 225 },
+    { label: "18",   angle: 270 },
+    { label: "21",   angle: 315 },
   ];
-  const labelR = rMax + size * 0.07;
+  const labelR = rMax + size * 0.09;
 
   return (
     <div className="relative flex items-center justify-center shrink-0"
-      style={{ width: size + size * 0.2, height: size + size * 0.2 }}>
-      <svg width={size + size * 0.2} height={size + size * 0.2}
-        viewBox={`${-size*0.1} ${-size*0.1} ${size*1.2} ${size*1.2}`}>
-        {/* Segments */}
+      style={{ width: size * 1.3, height: size * 1.3 }}>
+      <svg width={size * 1.3} height={size * 1.3}
+        viewBox={`${-size*0.15} ${-size*0.15} ${size*1.3} ${size*1.3}`}>
         {segments.map(s => <path key={s.i} d={s.d} fill={s.color} />)}
-        {/* Landmark ticks */}
         {landmarks.map(l => {
           const [tx, ty] = pXY(cx, cy, labelR, l.angle);
           return (
-            <text key={l.hour} x={tx} y={ty}
+            <text key={l.label} x={tx} y={ty}
               textAnchor="middle" dominantBaseline="central"
-              fontSize={size * 0.09} fill="#94a3b8" fontFamily="sans-serif"
+              fontSize={size * 0.075} fill="#94a3b8" fontFamily="sans-serif"
             >{l.label}</text>
           );
         })}
-        {/* Centre score */}
         <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
           fontSize={size * 0.22} fontWeight="700" fill={tc} fontFamily="sans-serif"
         >{score}</text>
