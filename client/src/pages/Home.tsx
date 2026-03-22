@@ -36,24 +36,53 @@ import {
 
 // ── Inline Day Bar Chart ─────────────────────────────────────────
 // Shows only daylight hours as coloured blocks, no labels/markings.
-function DayBars({ hours }: { hours: HourData[] }) {
+function DayBars({ hours, sunrise, sunset }: {
+  hours: HourData[];
+  sunrise: string; // "06:31"
+  sunset: string;  // "18:45"
+}) {
   const dayHours = hours.filter(h => h.isDay);
   if (dayHours.length === 0) return null;
-  const maxH = 48; // px
+  const maxH = 48;
+  const firstHour = dayHours[0].hour;
+  const lastHour = dayHours[dayHours.length - 1].hour;
+  const noonIdx = dayHours.findIndex(h => h.hour === 12);
+
   return (
-    <div className="flex items-end gap-[2px] w-full" style={{ height: maxH }}>
-      {dayHours.map(h => {
-        const barH = Math.max(3, Math.round((h.sunScore / 100) * maxH));
-        let bg = "bg-slate-200 dark:bg-slate-700";
-        if (h.sunScore >= 80) bg = "bg-amber-400";
-        else if (h.sunScore >= 65) bg = "bg-orange-300";
-        else if (h.sunScore >= 45) bg = "bg-yellow-200";
-        else if (h.sunScore >= 25) bg = "bg-stone-200 dark:bg-stone-600";
-        return (
-          <div key={h.hour} className={`flex-1 rounded-sm ${bg}`}
-            style={{ height: barH }} />
-        );
-      })}
+    <div className="flex flex-col gap-0.5 w-full">
+      {/* Bars */}
+      <div className="flex items-end gap-[2px] w-full" style={{ height: maxH }}>
+        {dayHours.map(h => {
+          const barH = Math.max(3, Math.round((h.sunScore / 100) * maxH));
+          let bg = "bg-slate-200 dark:bg-slate-700";
+          if (h.sunScore >= 80) bg = "bg-amber-400";
+          else if (h.sunScore >= 65) bg = "bg-orange-300";
+          else if (h.sunScore >= 45) bg = "bg-yellow-200";
+          else if (h.sunScore >= 25) bg = "bg-stone-200 dark:bg-stone-600";
+          return (
+            <div key={h.hour} className={`flex-1 rounded-sm ${bg}`}
+              style={{ height: barH }} />
+          );
+        })}
+      </div>
+      {/* Time labels: sunrise, 12:00, sunset */}
+      <div className="relative w-full" style={{ height: 14 }}>
+        {/* Sunrise — left-aligned under first bar */}
+        <span className="absolute text-[10px] text-muted-foreground" style={{ left: 0 }}>
+          {sunrise}
+        </span>
+        {/* 12:00 — centred under noon bar */}
+        {noonIdx >= 0 && (
+          <span className="absolute text-[10px] text-muted-foreground"
+            style={{ left: `${((noonIdx + 0.5) / dayHours.length) * 100}%`, transform: 'translateX(-50%)' }}>
+            12:00
+          </span>
+        )}
+        {/* Sunset — right-aligned under last bar */}
+        <span className="absolute text-[10px] text-muted-foreground" style={{ right: 0 }}>
+          {sunset}
+        </span>
+      </div>
     </div>
   );
 }
@@ -216,8 +245,8 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
         </div>
 
         {/* Bar chart — fills remaining width */}
-        <div className="flex-1 flex items-end min-w-0">
-          <DayBars hours={day.hours} />
+        <div className="flex-1 min-w-0">
+          <DayBars hours={day.hours} sunrise={day.sunrise} sunset={day.sunset} />
         </div>
 
         {/* Expand toggle */}
