@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import cors from "cors";
 console.log("[startup] DATABASE_URL present:", !!process.env.DATABASE_URL);
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
@@ -13,6 +14,18 @@ declare module "http" {
     rawBody: unknown;
   }
 }
+
+app.use(cors({
+  origin: [
+    "https://www.perplexity.ai",
+    "https://sites.pplx.app",
+    /\.perplexity\.ai$/,
+    /\.pplx\.app$/,
+    "http://localhost:5000",
+    "http://127.0.0.1:5000",
+  ],
+  credentials: true,
+}));
 
 app.use(
   express.json({
