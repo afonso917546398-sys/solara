@@ -60,24 +60,22 @@ function SunDial({ hours, score, size = 72 }: {
   size?: number;
 }) {
   const cx = size / 2, cy = size / 2;
-  const rMin = size * 0.14;
-  const rMax = size * 0.47;
-  const step = (rMax - rMin) / 24;
-  const gap = 1.2;
+  const rMin = size * 0.14;  // inner hole
+  const rMax = size * 0.47;  // outer edge
+  const step = (rMax - rMin) / 24; // radial growth per hour
+  const gap = 0.8; // degrees gap between segments
 
-  // Clock mapping: hour 0 = 12-o-clock (0°), clockwise.
-  // Each hour occupies 15° (360/24).
-  // pXY already maps 0° → top (12-o-clock) via the -90 offset inside it.
+  // 2 full turns → each hour = 30° (360/12)
+  // Hour 0  → 0°   (12-o-clock, inner)
+  // Hour 12 → 360° = 0° again (12-o-clock, halfway out)
+  // Hour 24 → 720° = 0° again (12-o-clock, outer edge)
+  // Clock landmarks: 0°=top, 90°=right(3/15h), 180°=bottom(6/18h), 270°=left(9/21h)
   const segments = Array.from({ length: 24 }, (_, i) => {
     const h = hours.find(h => h.hour === i);
     const r1 = rMin + i * step;
     const r2 = rMin + (i + 1) * step;
-    // hour 0 starts at clock 12 (0°), hour 12 at clock 12 (180° = bottom? NO)
-    // Clock degrees: 0h → 0°, 3h → 45°, 6h → 90°, 9h → 135°,
-    //                12h → 180°, 15h → 225°, 18h → 270°, 21h → 315°
-    // Each hour = 15° clockwise from top.
-    const a1 = i * 15 + gap / 2;
-    const a2 = (i + 1) * 15 - gap / 2;
+    const a1 = i * 30 + gap / 2;
+    const a2 = (i + 1) * 30 - gap / 2;
     const [x1, y1] = pXY(cx, cy, r1, a1);
     const [x2, y2] = pXY(cx, cy, r2, a1);
     const [x3, y3] = pXY(cx, cy, r2, a2);
@@ -92,41 +90,31 @@ function SunDial({ hours, score, size = 72 }: {
   else if (score >= 45) tc = "#eab308";
   else if (score >= 25) tc = "#a8a29e";
 
-  // Clock positions: 0/24h at top (0°), 3/15h at right (45°),
-  // 6/18h at bottom (90°), 9/21h at left (135°)
-  // In clock degrees (pXY maps 0° → 12-o-clock):
-  //   0h  → 0°   (top)
-  //   3h  → 45°  (upper right)  -- skip, too crowded
-  //   6h  → 90°  (right)
-  //   9h  → 135° (lower right) -- skip
-  //   12h → 180° (bottom)
-  //   15h → 225° (lower left) -- skip
-  //   18h → 270° (left)
-  //   21h → 315° (upper left) -- skip
+  // Landmark labels at clock positions
+  // 0°=top: 0/12/24 → label "0·12·24"
+  // 90°=right (3h & 15h): "3·15"
+  // 180°=bottom (6h & 18h): "6·18"
+  // 270°=left (9h & 21h): "9·21"
   const landmarks = [
-    { label: "0·24", angle: 0   },
-    { label: "3·15", angle: 45  },
-    { label: "6·18", angle: 90  },
-    { label: "9·21", angle: 135 },
-    { label: "12",   angle: 180 },
-    { label: "15",   angle: 225 },
-    { label: "18",   angle: 270 },
-    { label: "21",   angle: 315 },
+    { label: "0·12·24", angle: 0   },
+    { label: "3·15",    angle: 90  },
+    { label: "6·18",    angle: 180 },
+    { label: "9·21",    angle: 270 },
   ];
-  const labelR = rMax + size * 0.09;
+  const labelR = rMax + size * 0.1;
 
   return (
     <div className="relative flex items-center justify-center shrink-0"
-      style={{ width: size * 1.3, height: size * 1.3 }}>
-      <svg width={size * 1.3} height={size * 1.3}
-        viewBox={`${-size*0.15} ${-size*0.15} ${size*1.3} ${size*1.3}`}>
+      style={{ width: size * 1.35, height: size * 1.35 }}>
+      <svg width={size * 1.35} height={size * 1.35}
+        viewBox={`${-size*0.175} ${-size*0.175} ${size*1.35} ${size*1.35}`}>
         {segments.map(s => <path key={s.i} d={s.d} fill={s.color} />)}
         {landmarks.map(l => {
           const [tx, ty] = pXY(cx, cy, labelR, l.angle);
           return (
             <text key={l.label} x={tx} y={ty}
               textAnchor="middle" dominantBaseline="central"
-              fontSize={size * 0.075} fill="#94a3b8" fontFamily="sans-serif"
+              fontSize={size * 0.08} fill="#94a3b8" fontFamily="sans-serif"
             >{l.label}</text>
           );
         })}
