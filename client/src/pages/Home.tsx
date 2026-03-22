@@ -515,155 +515,228 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Content */}
-        <div className="px-5 py-4 flex flex-col gap-5 text-sm">
+        <div className="px-5 py-4 flex flex-col gap-6 text-sm">
 
           {/* How it works */}
           <div>
             <h3 className="font-semibold text-foreground mb-2">How the score works</h3>
-            <p className="text-muted-foreground leading-relaxed">
-              Each hour is scored 0–100 based on four real-time weather variables.
-              Hours that don’t meet the minimum thresholds below are capped at 30
-              — they won’t qualify for meaningful sun exposure regardless of other conditions.
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              Each daylight hour is scored 0–100 across five variables: UV index, direct solar radiation,
+              cloud cover, feels-like temperature, and wind speed. Hours below the minimum thresholds
+              are capped at 30 — physiologically not meaningful regardless of other conditions.
+              The daily score blends the average of all daylight hours with the best 2-hour peak window.
             </p>
           </div>
 
-          {/* Score legend */}
+          {/* Score labels */}
           <div>
             <h3 className="font-semibold text-foreground mb-2">Score labels</h3>
-            <div className="flex flex-col gap-1.5">
-              {[
-                { label: "Golden hour", range: "80–100", color: "bg-orange-600", desc: "Optimal — all thresholds clear, strong sun" },
-                { label: "Good sun", range: "65–79", color: "bg-yellow-500", desc: "Solid session, minor compromises" },
-                { label: "Partial sun", range: "45–64", color: "bg-yellow-200", desc: "Worth it but not ideal" },
-                { label: "Weak sun", range: "25–44", color: "bg-gray-300", desc: "Borderline — one or more thresholds are marginal" },
-                { label: "No sun", range: "0–24", color: "bg-gray-300", desc: "Does not qualify" },
-              ].map(s => (
-                <div key={s.label} className="flex items-center gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${s.color}`} />
-                  <span className="w-24 shrink-0 text-xs font-medium text-foreground">{s.label}</span>
-                  <span className="text-xs text-muted-foreground/70 w-14 shrink-0">{s.range}</span>
-                  <span className="text-xs text-muted-foreground">{s.desc}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Thresholds table */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-2">Minimum thresholds to qualify</h3>
             <div className="flex flex-col gap-2">
               {[
-                {
-                  variable: "UV Index",
-                  threshold: "≥ 3",
-                  why: "Below UV 3, UVB rays cannot trigger vitamin D synthesis in skin.",
-                  source: "WHO, SunSmart, GrassrootsHealth",
-                },
-                {
-                  variable: "Direct radiation",
-                  threshold: "≥ 120 W/m²",
-                  why: "Below this level, irradiance is equivalent to a heavily overcast sky — not practically useful outdoors.",
-                  source: "Open-Meteo direct\_radiation variable",
-                },
-                {
-                  variable: "Cloud cover",
-                  threshold: "≤ 75%",
-                  why: "Above ~6.5 octas of cloud, vitamin D exposure time more than doubles.",
-                  source: "PubMed 23108371",
-                },
-                {
-                  variable: "Feels-like temperature",
-                  threshold: "≥ 8°C",
-                  why: "Below 8°C it’s too cold to expose enough skin to benefit from sun.",
-                  source: "Practical threshold",
-                },
-              ].map(row => (
-                <div key={row.variable} className="bg-muted/40 rounded-xl p-3 flex flex-col gap-1">
-                  <div className="flex items-center justify-between">
-                    <span className="font-medium text-foreground">{row.variable}</span>
-                    <span className="text-xs font-mono bg-amber-100 dark:bg-amber-900/30 text-amber-800
-                      dark:text-amber-300 px-2 py-0.5 rounded-full">{row.threshold}</span>
+                { label: "Golden hour", range: "80–100", color: "bg-orange-600", desc: "Strong UV, clear sky, warm. Maximum benefit per minute outdoors." },
+                { label: "Good sun",    range: "65–79",  color: "bg-yellow-500", desc: "All thresholds met. Minor cloud or lower radiation — still worthwhile." },
+                { label: "Partial sun", range: "45–64",  color: "bg-yellow-200 border border-yellow-300", desc: "Qualifying but suboptimal. Longer sessions needed." },
+                { label: "Weak sun",    range: "25–44",  color: "bg-gray-300",   desc: "One or more variables barely above threshold. Very extended time required." },
+                { label: "No sun",      range: "0–24",   color: "bg-gray-200",   desc: "Below qualification thresholds. UV or radiation insufficient." },
+              ].map(s => (
+                <div key={s.label} className="flex items-start gap-3">
+                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${s.color}`} />
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-foreground">{s.label}</span>
+                      <span className="text-[10px] text-muted-foreground">{s.range}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{s.desc}</p>
                   </div>
-                  <p className="text-xs text-muted-foreground leading-relaxed">{row.why}</p>
-                  <p className="text-xs text-muted-foreground/60">Source: {row.source}</p>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Wind */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-1">Wind comfort penalty</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-              Wind does not block sunlight, but it affects whether you’ll comfortably stay outside long enough to benefit.
-              Penalties are derived from the <strong className="text-foreground">Beaufort scale</strong> descriptions for wind effect on people.
-            </p>
-            <div className="flex flex-col gap-1.5">
-              {[
-                { range: "< 29 km/h", beaufort: "Beaufort ≤ 4", penalty: "No penalty", desc: "Calm to moderate breeze" },
-                { range: "29–38 km/h", beaufort: "Beaufort 5", penalty: "−5 pts", desc: "Small trees sway, noticeably uncomfortable" },
-                { range: "39–49 km/h", beaufort: "Beaufort 6", penalty: "−10 pts", desc: "Large branches move, umbrellas hard to use" },
-                { range: "≥ 50 km/h", beaufort: "Beaufort 7+", penalty: "−15 pts", desc: "Whole trees in motion, effort to walk against" },
-              ].map(row => (
-                <div key={row.range} className="bg-muted/40 rounded-xl p-3 flex flex-col gap-0.5">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-medium text-foreground">{row.range}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">{row.beaufort}</span>
-                      <span className="text-xs font-mono bg-muted px-2 py-0.5 rounded-full text-foreground">{row.penalty}</span>
+          {/* Variable comfort zones */}
+          <div className="flex flex-col gap-4">
+            <h3 className="font-semibold text-foreground">Variable comfort zones</h3>
+
+            {/* UV Index */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-foreground">UV Index</span>
+                <span className="text-[10px] text-muted-foreground">Floor: UV 3 · WHO / GrassrootsHealth</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                {[
+                  { range: "< 2",   label: "Vitamin D winter", color: "bg-gray-200",   note: "No practical UVB synthesis. Defined as 'Vitamin D Winter' in the literature — no effective dose possible regardless of exposure duration. (Nutrients, 2024)" },
+                  { range: "2–2.9", label: "Insufficient",     color: "bg-gray-300",   note: "UVB present but below the synthesis threshold. No meaningful vitamin D produced. (WHO UV Index)" },
+                  { range: "3–4.9", label: "Qualifying",       color: "bg-yellow-200", note: "UVB synthesis begins. ~20–30 min needed for Fitzpatrick Type II skin at UV 3.5. (Overcoming MS; WHO)" },
+                  { range: "5–7.9", label: "Good",             color: "bg-yellow-400", note: "Effective range. 10–15 min for Type II skin. Optimal window for vitamin D and mood. (Holick, NEJM 2007)" },
+                  { range: "8–10",  label: "Excellent",        color: "bg-orange-500", note: "Peak synthesis. 5–10 min for Type II. Longer exposure raises burn risk without additional D gain. (SunSmart)" },
+                  { range: "> 10",  label: "Very high",        color: "bg-red-400 text-white", note: "Equatorial or high-altitude summer. Limit unprotected exposure to under 5 min. (WHO)" },
+                ].map(r => (
+                  <div key={r.range} className="flex items-start gap-2">
+                    <div className={`w-12 shrink-0 text-[10px] font-mono text-center py-0.5 rounded ${r.color}`}>{r.range}</div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-semibold text-foreground">{r.label} — </span>
+                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.note}</span>
                     </div>
                   </div>
-                  <p className="text-xs text-muted-foreground">{row.desc}</p>
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
+
+            {/* Direct radiation */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-foreground">Direct radiation (W/m²)</span>
+                <span className="text-[10px] text-muted-foreground">Floor: 120 W/m²</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                {[
+                  { range: "< 50",    label: "Negligible",      color: "bg-gray-200",   note: "Night or deep cloud. No solar irradiance reaching surface." },
+                  { range: "50–120",  label: "Below threshold", color: "bg-gray-300",   note: "Heavy cloud or very low sun angle. Too weak for practical benefit outdoors." },
+                  { range: "120–250", label: "Marginal",        color: "bg-yellow-200", note: "Moderately cloudy or early/late low-angle sun. Sessions need to be longer to compensate." },
+                  { range: "250–500", label: "Good",            color: "bg-yellow-400", note: "Clear-sky morning or afternoon. Meaningful dose achievable in 15–30 min." },
+                  { range: "500–700", label: "Excellent",       color: "bg-orange-400", note: "Strong direct sun. Mid-morning to mid-afternoon in spring/summer Portugal. (Open-Meteo archive)" },
+                  { range: "> 700",   label: "Peak summer",     color: "bg-orange-600", note: "Peak summer midday irradiance in Iberia. Maximum synthesis rate. (Aug 2025 Lendiosa: 736 W/m² at noon)" },
+                ].map(r => (
+                  <div key={r.range} className="flex items-start gap-2">
+                    <div className={`w-14 shrink-0 text-[10px] font-mono text-center py-0.5 rounded ${r.color}`}>{r.range}</div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-semibold text-foreground">{r.label} — </span>
+                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.note}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Cloud cover */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-foreground">Cloud cover</span>
+                <span className="text-[10px] text-muted-foreground">Ceiling: 75% · PubMed 23108371</span>
+              </div>
+              <div className="flex flex-col gap-1">
+                {[
+                  { range: "0–10%",   label: "Clear sky",        color: "bg-orange-400", note: "Maximum irradiance. No cloud penalty. Scores driven purely by UV and radiation." },
+                  { range: "10–40%",  label: "Mostly clear",     color: "bg-yellow-400", note: "Light cloud diffuses some radiation. Minor effect on synthesis." },
+                  { range: "40–75%",  label: "Partly cloudy",    color: "bg-yellow-200", note: "Noticeable reduction. Exposure time needs to increase to compensate." },
+                  { range: "75–87%",  label: "Above threshold",  color: "bg-gray-300",   note: "6.5+ octas. Vitamin D exposure time more than doubles above this level. Score capped. (Photochem Photobiol Sci, 2012)" },
+                  { range: "> 87%",   label: "Overcast",         color: "bg-gray-400",   note: "7.5+ octas. UVD irradiance at just 45% of clear-sky value. Practically ineffective. (PubMed 23108371)" },
+                ].map(r => (
+                  <div key={r.range} className="flex items-start gap-2">
+                    <div className={`w-12 shrink-0 text-[10px] font-mono text-center py-0.5 rounded ${r.color}`}>{r.range}</div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-semibold text-foreground">{r.label} — </span>
+                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.note}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Temperature */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-foreground">Feels-like temperature</span>
+                <span className="text-[10px] text-muted-foreground">Floor: 8°C</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground mb-1.5 leading-relaxed">
+                Temperature doesn't block UV, but determines how much skin you'll expose —
+                and therefore how much vitamin D you can synthesise. Feels-like accounts for wind chill.
+              </p>
+              <div className="flex flex-col gap-1">
+                {[
+                  { range: "< 8°C",   label: "Too cold",    color: "bg-gray-300",   note: "Not enough skin exposed in practice for meaningful synthesis. Score capped at 30." },
+                  { range: "8–12°C",  label: "Marginal",    color: "bg-yellow-200", note: "Chilly. Face and forearms possible at minimum, but sessions should be brief." },
+                  { range: "12–18°C", label: "Comfortable", color: "bg-yellow-400", note: "Typical spring Portugal. Arms and legs exposable for a normal session." },
+                  { range: "18–26°C", label: "Ideal",       color: "bg-orange-400", note: "Warm enough to expose significant skin area. Maximum synthesis efficiency." },
+                  { range: "> 26°C",  label: "Hot",         color: "bg-orange-600", note: "Excellent for synthesis. Limit unprotected session to recommended time for your skin type." },
+                ].map(r => (
+                  <div key={r.range} className="flex items-start gap-2">
+                    <div className={`w-14 shrink-0 text-[10px] font-mono text-center py-0.5 rounded ${r.color}`}>{r.range}</div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-semibold text-foreground">{r.label} — </span>
+                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.note}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Wind */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-semibold text-foreground">Wind speed</span>
+                <span className="text-[10px] text-muted-foreground">Beaufort scale · comfort penalty only</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground mb-1.5 leading-relaxed">
+                Wind does not block UV. Penalty reflects whether you'll comfortably stay
+                outside long enough to benefit — derived from Beaufort scale descriptions.
+              </p>
+              <div className="flex flex-col gap-1">
+                {[
+                  { range: "< 29 km/h",  bf: "B≤4", pts: "0",   color: "bg-orange-400", desc: "Calm to moderate breeze. No effect on comfort." },
+                  { range: "29–38 km/h", bf: "B5",  pts: "−5",  color: "bg-yellow-300", desc: "Fresh breeze. Small trees sway; noticeably uncomfortable for extended stays." },
+                  { range: "39–49 km/h", bf: "B6",  pts: "−10", color: "bg-gray-300",   desc: "Strong breeze. Large branches move; hard to maintain prolonged skin exposure." },
+                  { range: "≥ 50 km/h",  bf: "B7+", pts: "−15", color: "bg-gray-400",   desc: "Near gale. Whole trees in motion; most people will not stay outside." },
+                ].map(r => (
+                  <div key={r.range} className="flex items-start gap-2">
+                    <div className={`w-18 shrink-0 text-[10px] font-mono text-center py-0.5 rounded px-1 ${r.color}`}>{r.range}</div>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-[10px] font-semibold text-foreground">{r.bf} · {r.pts} pts — </span>
+                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Exposure calculator */}
+          {/* Exposure estimate */}
           <div>
-            <h3 className="font-semibold text-foreground mb-1">Exposure estimate</h3>
+            <h3 className="font-semibold text-foreground mb-1">Exposure time estimate</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-              When you expand a day, Solara shows the approximate minutes of outdoor sun exposure
-              needed for a meaningful vitamin D dose at the best hour of that day.
-              Based on Holick (2007), NEJM 357:266–281 and WHO UV guidelines.
-              Assumes face and arms exposed (~25% body surface).
+              When you expand a day, Solara estimates minutes needed outdoors for a meaningful
+              vitamin D dose at the best qualifying hour. Based on Holick's Rule (NEJM 2007;
+              Am J Clin Nutr 2004): ~25% body surface exposed to 1/4 MED. Baseline: 15 min
+              at UV 3 for Fitzpatrick Type II. Multipliers from Tsiaras & Weinstock (2011)
+              and Nutrients (2024).
             </p>
             <div className="flex flex-col gap-1.5">
               {SKIN_TYPES.map(s => (
                 <div key={s.id} className="flex items-center gap-3">
                   <span className="text-xs font-medium text-foreground w-16 shrink-0">{s.label}</span>
-                  <span className="text-xs text-muted-foreground">{s.description}</span>
-                  <span className="text-xs text-muted-foreground/60 ml-auto shrink-0">
-                    ×{s.multiplier} baseline
-                  </span>
+                  <span className="text-xs text-muted-foreground flex-1">{s.description}</span>
+                  <span className="text-[10px] text-muted-foreground/60 shrink-0">×{s.multiplier}</span>
                 </div>
               ))}
             </div>
           </div>
 
           {/* Skin type caveat */}
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40
-            rounded-xl p-3 flex flex-col gap-1.5">
+          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-xl p-3 flex flex-col gap-1.5">
             <div className="flex items-center gap-2">
               <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
               <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">Skin type matters</span>
             </div>
             <p className="text-xs text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
-              Solara uses the same score for everyone, but safe and effective exposure time
-              varies significantly by skin type. Fair skin (Fitzpatrick I–II) may burn at UV 4
-              in under 15 minutes. Darker skin (Fitzpatrick V–VI) needs longer exposure to
-              produce the same vitamin D. Adjust your time outdoors accordingly.
+              Solara uses the same score for all users, but safe exposure time varies widely.
+              Fair skin (Fitzpatrick I–II) may reach MED in under 10 min at UV 8.
+              Darker skin (Fitzpatrick V–VI) requires up to 4× longer for the same vitamin D.
+              Use the skin type selector in the day view to personalise your estimate.
+              (Nutrients, 2024; Holick, NEJM 2007)
             </p>
           </div>
 
           {/* Medical disclaimer */}
           <div className="border-t border-border pt-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">Not medical advice.</strong> Sun scores are
-              derived from publicly available weather data and published UV guidelines.
-              If you take photosensitising medications (some antibiotics, antidepressants,
-              or retinoids), or have a light-sensitive condition such as lupus or
-              xeroderma pigmentosum, consult your doctor before increasing sun exposure.
+              <strong className="text-foreground">Not medical advice.</strong> Scores are derived
+              from publicly available weather data and published UV/photobiology research.
+              If you take photosensitising medications (fluoroquinolone antibiotics, tetracyclines,
+              thiazide diuretics, certain antidepressants, or retinoids), or have a light-sensitive
+              condition (lupus, xeroderma pigmentosum, porphyria), consult your doctor before
+              increasing sun exposure.
             </p>
           </div>
         </div>
