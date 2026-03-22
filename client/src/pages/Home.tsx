@@ -39,10 +39,11 @@ import {
 function DayBars({ hours }: { hours: HourData[] }) {
   const dayHours = hours.filter(h => h.isDay);
   if (dayHours.length === 0) return null;
+  const maxH = 40; // px
   return (
-    <div className="flex items-end gap-[1px] h-10 flex-1">
+    <div className="flex items-end gap-[2px] w-full" style={{ height: maxH }}>
       {dayHours.map(h => {
-        const height = Math.max(15, (h.sunScore / 100) * 100);
+        const barH = Math.max(3, Math.round((h.sunScore / 100) * maxH));
         let bg = "bg-slate-200 dark:bg-slate-700";
         if (h.sunScore >= 80) bg = "bg-amber-400";
         else if (h.sunScore >= 65) bg = "bg-orange-300";
@@ -50,7 +51,7 @@ function DayBars({ hours }: { hours: HourData[] }) {
         else if (h.sunScore >= 25) bg = "bg-stone-200 dark:bg-stone-600";
         return (
           <div key={h.hour} className={`flex-1 rounded-sm ${bg}`}
-            style={{ height: `${height}%` }} />
+            style={{ height: barH }} />
         );
       })}
     </div>
@@ -206,13 +207,12 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
         onClick={() => setExpanded(e => !e)}
         className="w-full text-left p-4 flex items-start gap-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
       >
-        {/* Date + score dot */}
-        <div className="flex flex-col gap-1.5 shrink-0">
+        {/* Date */}
+        <div className="flex flex-col gap-0.5 shrink-0 min-w-[48px]">
           <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             {day.isToday ? 'Today' : day.weekday}
           </div>
           <div className="text-sm font-medium text-foreground">{day.dateLabel}</div>
-          <ScoreDot score={day.dayScore} size={38} />
         </div>
 
         {/* Score label + peak window + sunrise/sunset */}
@@ -232,7 +232,7 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
         </div>
 
         {/* Bar chart — sunrise to sunset, right side */}
-        <div className="flex flex-col justify-end w-24 shrink-0">
+        <div className="w-28 shrink-0 flex items-end">
           <DayBars hours={day.hours} />
         </div>
 
