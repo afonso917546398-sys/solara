@@ -1,8 +1,5 @@
-// Load .env in local dev only
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-}
 import express, { type Request, Response, NextFunction } from "express";
+console.log("[startup] DATABASE_URL present:", !!process.env.DATABASE_URL);
 import { registerRoutes } from "./routes";
 import { serveStatic } from "./static";
 import { initDb } from "./storage";
