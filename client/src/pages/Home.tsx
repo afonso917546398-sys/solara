@@ -311,6 +311,64 @@ function WeekSummary({ days }: { days: DayData[] }) {
   );
 }
 
+// ── Intro Screen ─────────────────────────────────────────────────
+function IntroScreen({ onDone }: { onDone: () => void }) {
+  return (
+    <div className="min-h-screen bg-background flex flex-col items-center justify-between px-6 py-12">
+      {/* Top: logo + name */}
+      <div className="flex items-center gap-2.5 self-start">
+        <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
+          <circle cx="16" cy="16" r="6" fill="#f59e0b" />
+          {[0,60,120,180,240,300].map((deg: number) => {
+            const rad = (deg * Math.PI) / 180;
+            const x1 = 16 + 9 * Math.cos(rad), y1 = 16 + 9 * Math.sin(rad);
+            const x2 = 16 + 13 * Math.cos(rad), y2 = 16 + 13 * Math.sin(rad);
+            return <line key={deg} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" />;
+          })}
+        </svg>
+        <span className="font-bold text-base tracking-tight">Solara</span>
+      </div>
+
+      {/* Centre: headline + copy */}
+      <div className="flex flex-col gap-6 max-w-sm w-full">
+        <div className="flex flex-col gap-3">
+          <h1 className="text-2xl font-bold text-foreground leading-tight">
+            For people who feel better in the sun.
+          </h1>
+          <p className="text-base text-muted-foreground leading-relaxed">
+            Solara scores every hour of daylight based on UV, radiation,
+            cloud cover, temperature and wind — so you always know the best
+            moment to step outside.
+          </p>
+          <p className="text-base text-muted-foreground leading-relaxed">
+            Open it in the morning. Go out when the bars glow orange.
+          </p>
+        </div>
+
+        {/* CTA */}
+        <button
+          data-testid="btn-get-started"
+          onClick={onDone}
+          className="w-full h-12 rounded-xl bg-primary text-primary-foreground
+            text-base font-semibold hover:bg-primary/90 transition-colors"
+        >
+          Get started
+        </button>
+
+        <p className="text-xs text-muted-foreground text-center">
+          No account. No tracking. Just weather data and science.
+        </p>
+      </div>
+
+      {/* Bottom: disclaimer */}
+      <p className="text-xs text-muted-foreground/60 text-center max-w-xs">
+        Sun scores are based on weather data. Everyone's skin and health needs are different —
+        use your own judgement and consult a doctor if you have light-sensitive conditions.
+      </p>
+    </div>
+  );
+}
+
 // ── Location Gate ─────────────────────────────────────────────────
 function LocationGate({ onLocation }: { onLocation: (lat: number, lon: number, name: string) => void }) {
   const [query, setQuery] = useState("");
@@ -1126,6 +1184,7 @@ export default function Home() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [skinTypeId, setSkinTypeId] = useState(2);
   const [units, setUnits] = useState<UnitSystem>('metric');
+  const [introDone, setIntroDone] = useState<boolean | null>(null); // null = loading
   const qc = useQueryClient();
 
   // Load saved preferences on mount
@@ -1137,12 +1196,21 @@ export default function Home() {
     queryKey: ['/api/prefs/units'],
     staleTime: Infinity,
   });
+  const { data: introPref } = useQuery<{ value: string | null }>({
+    queryKey: ['/api/prefs/intro_done'],
+    staleTime: Infinity,
+  });
   useEffect(() => {
     if (skinPref?.value) setSkinTypeId(Number(skinPref.value));
   }, [skinPref]);
   useEffect(() => {
     if (unitsPref?.value === 'imperial') setUnits('imperial');
   }, [unitsPref]);
+  useEffect(() => {
+    if (introPref !== undefined) {
+      setIntroDone(introPref?.value === '1');
+    }
+  }, [introPref]);
 
   const saveSkinType = useCallback((id: number) => {
     setSkinTypeId(id);
@@ -1178,6 +1246,16 @@ export default function Home() {
     }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['/api/favourites'] }),
   });
+
+  // Still loading prefs — show nothing to avoid flash
+  if (introDone === null) return null;
+
+  if (!introDone) {
+    return <IntroScreen onDone={() => {
+      setIntroDone(true);
+      apiRequest('POST', '/api/prefs/intro_done', { value: '1' });
+    }} />;
+  }
 
   if (!location) {
     return <LocationGate onLocation={(lat, lon, name) => setLocation({ lat, lon, name })} />;
