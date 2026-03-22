@@ -116,11 +116,16 @@ function HourRow({ h, isPeak, units }: { h: HourData; isPeak: boolean; units: Un
   return (
     <div className={`flex flex-col gap-1.5 px-3 py-2.5 rounded-lg text-sm transition-colors
       ${isPeak ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40' : 'hover:bg-muted/50'}`}>
-      {/* Top row: time + bar + score + badge */}
+      {/* Top row: time + bar + score */}
       <div className="flex items-center gap-3">
-        <span className={`w-14 font-mono text-sm shrink-0 ${isPeak ? 'font-bold text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
-          {h.timeLabel}
-        </span>
+        <div className="w-14 shrink-0 flex flex-col">
+          <span className={`font-mono text-sm ${isPeak ? 'font-bold text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+            {h.timeLabel}
+          </span>
+          {isPeak && (
+            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 leading-none mt-0.5">Peak</span>
+          )}
+        </div>
         <div className="flex-1 h-2.5 bg-border rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all ${pct > 0 ? hourBarColor(pct) : ''}`}
             style={{ width: `${pct}%` }} />
@@ -128,9 +133,6 @@ function HourRow({ h, isPeak, units }: { h: HourData; isPeak: boolean; units: Un
         <span className={`text-sm font-bold w-8 text-right shrink-0 ${scoreColor(h.sunScore)}`}>
           {h.isDay ? h.sunScore : '—'}
         </span>
-        {isPeak && (
-          <Badge className="text-xs h-4 px-1.5 shrink-0 bg-amber-500 text-white border-0">Peak</Badge>
-        )}
       </div>
       {/* Raw variables row — only during daylight */}
       {h.isDay && (
