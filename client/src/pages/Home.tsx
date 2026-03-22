@@ -49,7 +49,7 @@ function DayBars({ hours, sunrise, sunset }: {
   const noonIdx = dayHours.findIndex(h => h.hour === 12);
 
   return (
-    <div className="flex flex-col gap-0.5 w-full">
+    <div className="flex flex-col w-full" style={{ paddingBottom: 16 }}>
       {/* Bars */}
       <div className="flex items-end gap-[2px] w-full" style={{ height: maxH }}>
         {dayHours.map(h => {
@@ -63,10 +63,18 @@ function DayBars({ hours, sunrise, sunset }: {
           return (
             <div key={h.hour} className="flex-1 rounded-sm relative"
               style={{ height: barH, backgroundColor: bg }}>
-              {showLabel && barH >= 12 && (
-                <span className="absolute -bottom-[14px] left-1/2 -translate-x-1/2 whitespace-nowrap"
-                  style={{ fontSize: 8, fontWeight: 600, color: '#78716c', lineHeight: 1 }}>
-                  {h.timeLabel}
+              {/* Score inside bar */}
+              {showLabel && barH >= 14 && (
+                <span className="absolute inset-0 flex items-center justify-center"
+                  style={{ fontSize: 8, fontWeight: 700, color: 'rgba(0,0,0,0.5)', lineHeight: 1 }}>
+                  {h.sunScore}
+                </span>
+              )}
+              {/* Hour label below bar */}
+              {showLabel && (
+                <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap"
+                  style={{ top: '100%', marginTop: 2, fontSize: 8, fontWeight: 600, color: '#78716c', lineHeight: 1 }}>
+                  {h.hour}
                 </span>
               )}
             </div>
