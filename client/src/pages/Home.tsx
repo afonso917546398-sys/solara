@@ -43,7 +43,7 @@ function DayBars({ hours, sunrise, sunset }: {
 }) {
   const dayHours = hours.filter(h => h.isDay);
   if (dayHours.length === 0) return null;
-  const maxH = 48;
+  const maxH = 56;
   const firstHour = dayHours[0].hour;
   const lastHour = dayHours[dayHours.length - 1].hour;
   const noonIdx = dayHours.findIndex(h => h.hour === 12);
@@ -66,14 +66,14 @@ function DayBars({ hours, sunrise, sunset }: {
               {/* Score inside bar */}
               {showLabel && barH >= 14 && (
                 <span className="absolute inset-0 flex items-center justify-center"
-                  style={{ fontSize: 8, fontWeight: 700, color: 'rgba(0,0,0,0.5)', lineHeight: 1 }}>
+                  style={{ fontSize: 10, fontWeight: 700, color: 'rgba(0,0,0,0.55)', lineHeight: 1 }}>
                   {h.sunScore}
                 </span>
               )}
               {/* Hour label below bar */}
               {showLabel && (
                 <span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap"
-                  style={{ top: '100%', marginTop: 2, fontSize: 8, fontWeight: 600, color: '#78716c', lineHeight: 1 }}>
+                  style={{ top: '100%', marginTop: 2, fontSize: 10, fontWeight: 600, color: '#78716c', lineHeight: 1 }}>
                   {h.hour}
                 </span>
               )}
@@ -83,7 +83,7 @@ function DayBars({ hours, sunrise, sunset }: {
       </div>
       {/* Time labels: sunrise and sunset only */}
       <div className="relative w-full" style={{ height: 14, marginTop: 16 }}>
-        <span className="absolute text-[10px] text-muted-foreground" style={{ left: 0 }}>
+        <span className="absolute text-xs text-muted-foreground" style={{ left: 0 }}>
           {sunrise}
         </span>
         <span className="absolute text-[10px] text-muted-foreground" style={{ right: 0 }}>
@@ -119,18 +119,18 @@ function HourRow({ h, isPeak, units }: { h: HourData; isPeak: boolean; units: Un
       {/* Top row: time + bar + score */}
       <div className="flex items-center gap-3">
         <div className="w-14 shrink-0 flex flex-col">
-          <span className={`font-mono text-sm ${isPeak ? 'font-bold text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
+          <span className={`font-mono text-xs ${isPeak ? 'font-bold text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
             {h.timeLabel}
           </span>
           {isPeak && (
             <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 leading-none mt-0.5">Peak</span>
           )}
         </div>
-        <div className="flex-1 h-2.5 bg-border rounded-full overflow-hidden">
+        <div className="flex-1 h-3 bg-border rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all ${pct > 0 ? hourBarColor(pct) : ''}`}
             style={{ width: `${pct}%` }} />
         </div>
-        <span className={`text-sm font-bold w-8 text-right shrink-0 ${scoreColor(h.sunScore)}`}>
+        <span className={`text-base font-bold w-8 text-right shrink-0 ${scoreColor(h.sunScore)}`}>
           {h.isDay ? h.sunScore : '—'}
         </span>
       </div>
@@ -246,11 +246,11 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
         className="w-full text-left p-4 flex items-start gap-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
       >
         {/* Date */}
-        <div className="flex flex-col gap-0.5 shrink-0 w-14">
-          <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="flex flex-col gap-0 shrink-0 w-10">
+          <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider leading-tight">
             {day.isToday ? 'Today' : day.weekday}
           </div>
-          <div className="text-sm font-medium text-foreground">{day.dateLabel}</div>
+          <div className="text-xs font-medium text-foreground leading-tight">{day.dateLabel}</div>
         </div>
 
         {/* Bar chart — fills remaining width */}
