@@ -34,97 +34,44 @@ import {
   Star, Trash2, History, ThumbsUp, ThumbsDown, Info,
 } from "lucide-react";
 
-// ── Sun Spiral Dial ──────────────────────────────────────────────
-// Nautilus-style spiral: 00:00 at inner 12-o-clock, winds clockwise,
-// 24:00 arrives back at outer 12-o-clock.
-// Each of the 24 hours is a thick arc band coloured by sun score.
-// Landmark ticks at 0h/12h/18h/6h for orientation.
-
-function segColor(score: number, isDay: number, isDark: boolean): string {
-  if (!isDay) return isDark ? "#1e293b" : "#f1f5f9"; // night
-  if (score >= 80) return "#f59e0b";
-  if (score >= 65) return "#fb923c";
-  if (score >= 45) return "#fde68a";
-  if (score >= 25) return "#fef9c3";
-  return isDark ? "#1e293b" : "#f1f5f9";
-}
-
-function pXY(cx: number, cy: number, r: number, deg: number) {
-  const rad = ((deg - 90) * Math.PI) / 180;
-  return [cx + r * Math.cos(rad), cy + r * Math.sin(rad)] as [number, number];
-}
-
-function SunDial({ hours, score, size = 72 }: {
-  hours: HourData[];
-  score: number;
-  size?: number;
-}) {
-  const cx = size / 2, cy = size / 2;
-  const rMin = size * 0.14;  // inner hole
-  const rMax = size * 0.47;  // outer edge
-  const step = (rMax - rMin) / 24; // radial growth per hour
-  const gap = 0.8; // degrees gap between segments
-
-  // 2 full turns → each hour = 30° (360/12)
-  // Hour 0  → 0°   (12-o-clock, inner)
-  // Hour 12 → 360° = 0° again (12-o-clock, halfway out)
-  // Hour 24 → 720° = 0° again (12-o-clock, outer edge)
-  // Clock landmarks: 0°=top, 90°=right(3/15h), 180°=bottom(6/18h), 270°=left(9/21h)
-  const segments = Array.from({ length: 24 }, (_, i) => {
-    const h = hours.find(h => h.hour === i);
-    const r1 = rMin + i * step;
-    const r2 = rMin + (i + 1) * step;
-    const a1 = i * 30 + gap / 2;
-    const a2 = (i + 1) * 30 - gap / 2;
-    const [x1, y1] = pXY(cx, cy, r1, a1);
-    const [x2, y2] = pXY(cx, cy, r2, a1);
-    const [x3, y3] = pXY(cx, cy, r2, a2);
-    const [x4, y4] = pXY(cx, cy, r1, a2);
-    const d = `M${x1},${y1} L${x2},${y2} A${r2},${r2} 0 0,1 ${x3},${y3} L${x4},${y4} A${r1},${r1} 0 0,0 ${x1},${y1}Z`;
-    return { d, color: segColor(h?.sunScore ?? 0, h?.isDay ?? 0, false), i };
-  });
-
-  let tc = "#94a3b8";
-  if (score >= 80) tc = "#f59e0b";
-  else if (score >= 65) tc = "#fb923c";
-  else if (score >= 45) tc = "#eab308";
-  else if (score >= 25) tc = "#a8a29e";
-
-  // Landmark labels at clock positions
-  // 0°=top: 0/12/24 → label "0·12·24"
-  // 90°=right (3h & 15h): "3·15"
-  // 180°=bottom (6h & 18h): "6·18"
-  // 270°=left (9h & 21h): "9·21"
-  const landmarks = [
-    { label: "0·12·24", angle: 0   },
-    { label: "3·15",    angle: 90  },
-    { label: "6·18",    angle: 180 },
-    { label: "9·21",    angle: 270 },
-  ];
-  const labelR = rMax + size * 0.1;
-
+// ── Inline Day Bar Chart ─────────────────────────────────────────
+// Shows only daylight hours as coloured blocks, no labels/markings.
+function DayBars({ hours }: { hours: HourData[] }) {
+  const dayHours = hours.filter(h => h.isDay);
+  if (dayHours.length === 0) return null;
   return (
-    <div className="relative flex items-center justify-center shrink-0"
-      style={{ width: size * 1.35, height: size * 1.35 }}>
-      <svg width={size * 1.35} height={size * 1.35}
-        viewBox={`${-size*0.175} ${-size*0.175} ${size*1.35} ${size*1.35}`}>
-        {segments.map(s => <path key={s.i} d={s.d} fill={s.color} />)}
-        {landmarks.map(l => {
-          const [tx, ty] = pXY(cx, cy, labelR, l.angle);
-          return (
-            <text key={l.label} x={tx} y={ty}
-              textAnchor="middle" dominantBaseline="central"
-              fontSize={size * 0.08} fill="#94a3b8" fontFamily="sans-serif"
-            >{l.label}</text>
-          );
-        })}
-        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
-          fontSize={size * 0.22} fontWeight="700" fill={tc} fontFamily="sans-serif"
-        >{score}</text>
-      </svg>
+    <div className="flex items-end gap-[1px] h-10 flex-1">
+      {dayHours.map(h => {
+        const height = Math.max(15, (h.sunScore / 100) * 100);
+        let bg = "bg-slate-200 dark:bg-slate-700";
+        if (h.sunScore >= 80) bg = "bg-amber-400";
+        else if (h.sunScore >= 65) bg = "bg-orange-300";
+        else if (h.sunScore >= 45) bg = "bg-yellow-200";
+        else if (h.sunScore >= 25) bg = "bg-stone-200 dark:bg-stone-600";
+        return (
+          <div key={h.hour} className={`flex-1 rounded-sm ${bg}`}
+            style={{ height: `${height}%` }} />
+        );
+      })}
     </div>
   );
 }
+
+// ── Score Arc (kept for centre score display) ─────────────────────
+function ScoreDot({ score, size = 44 }: { score: number; size?: number }) {
+  let color = "#94a3b8";
+  if (score >= 80) color = "#f59e0b";
+  else if (score >= 65) color = "#fb923c";
+  else if (score >= 45) color = "#eab308";
+  else if (score >= 25) color = "#a8a29e";
+  return (
+    <div className="shrink-0 flex items-center justify-center rounded-full border-2"
+      style={{ width: size, height: size, borderColor: color }}>
+      <span className="font-bold text-sm" style={{ color }}>{score}</span>
+    </div>
+  );
+}
+
 
 // ── Hour Row ──────────────────────────────────────────────────────
 function HourRow({ h, isPeak, units }: { h: HourData; isPeak: boolean; units: UnitSystem }) {
@@ -259,37 +206,38 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
         onClick={() => setExpanded(e => !e)}
         className="w-full text-left p-4 flex items-start gap-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
       >
-        {/* Date */}
-        <div className="min-w-[52px]">
+        {/* Date + score dot */}
+        <div className="flex flex-col gap-1.5 shrink-0">
           <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             {day.isToday ? 'Today' : day.weekday}
           </div>
           <div className="text-sm font-medium text-foreground">{day.dateLabel}</div>
+          <ScoreDot score={day.dayScore} size={38} />
         </div>
 
-        {/* Arc score */}
-        <SunDial hours={day.hours} score={day.dayScore} size={72} />
-
-        {/* Score label + peak window */}
-        <div className="flex-1 min-w-0">
+        {/* Score label + peak window + sunrise/sunset */}
+        <div className="flex-1 min-w-0 flex flex-col justify-center">
           <div className={`text-base font-bold ${scoreColor(day.dayScore)}`}>{day.scoreLabel}</div>
           {peak && peak.score >= 40 ? (
             <div className="text-sm text-muted-foreground mt-0.5">
               Go out: <span className="font-medium text-foreground">{peak.start}–{peak.end}</span>
-              <span className={`ml-1.5 ${scoreColor(peak.score)}`}>({peak.score}/100)</span>
             </div>
           ) : (
-            <div className="text-sm text-muted-foreground mt-0.5">No qualifying sun window</div>
+            <div className="text-sm text-muted-foreground mt-0.5">No qualifying window</div>
           )}
-          {/* Sunrise/sunset */}
-          <div className="flex gap-3 mt-1.5 text-xs text-muted-foreground">
+          <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
             <span><Sunrise size={10} className="inline mr-0.5" />{day.sunrise}</span>
             <span><Sunset size={10} className="inline mr-0.5" />{day.sunset}</span>
           </div>
         </div>
 
+        {/* Bar chart — sunrise to sunset, right side */}
+        <div className="flex flex-col justify-end w-24 shrink-0">
+          <DayBars hours={day.hours} />
+        </div>
+
         {/* Expand toggle */}
-        <div className="text-muted-foreground mt-1 shrink-0">
+        <div className="text-muted-foreground shrink-0 self-center">
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
       </button>
