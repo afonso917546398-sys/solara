@@ -39,7 +39,7 @@ import {
 function DayBars({ hours }: { hours: HourData[] }) {
   const dayHours = hours.filter(h => h.isDay);
   if (dayHours.length === 0) return null;
-  const maxH = 40; // px
+  const maxH = 48; // px
   return (
     <div className="flex items-end gap-[2px] w-full" style={{ height: maxH }}>
       {dayHours.map(h => {
@@ -200,7 +200,7 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
   const peak = day.peakWindow;
 
   return (
-    <div className={`border rounded-2xl overflow-hidden transition-all ${bg}`}>
+    <div className="border border-border rounded-2xl overflow-hidden transition-all bg-card">
       {/* Header — always visible */}
       <button
         data-testid={`day-card-${day.date}`}
@@ -208,36 +208,20 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
         className="w-full text-left p-4 flex items-start gap-4 hover:bg-black/[0.02] dark:hover:bg-white/[0.02] transition-colors"
       >
         {/* Date */}
-        <div className="flex flex-col gap-0.5 shrink-0 min-w-[48px]">
+        <div className="flex flex-col gap-0.5 shrink-0 w-14">
           <div className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">
             {day.isToday ? 'Today' : day.weekday}
           </div>
           <div className="text-sm font-medium text-foreground">{day.dateLabel}</div>
         </div>
 
-        {/* Score label + peak window + sunrise/sunset */}
-        <div className="flex-1 min-w-0 flex flex-col justify-center">
-          <div className={`text-base font-bold ${scoreColor(day.dayScore)}`}>{day.scoreLabel}</div>
-          {peak && peak.score >= 40 ? (
-            <div className="text-sm text-muted-foreground mt-0.5">
-              Go out: <span className="font-medium text-foreground">{peak.start}–{peak.end}</span>
-            </div>
-          ) : (
-            <div className="text-sm text-muted-foreground mt-0.5">No qualifying window</div>
-          )}
-          <div className="flex gap-3 mt-1 text-xs text-muted-foreground">
-            <span><Sunrise size={10} className="inline mr-0.5" />{day.sunrise}</span>
-            <span><Sunset size={10} className="inline mr-0.5" />{day.sunset}</span>
-          </div>
-        </div>
-
-        {/* Bar chart — sunrise to sunset, right side */}
-        <div className="w-28 shrink-0 flex items-end">
+        {/* Bar chart — fills remaining width */}
+        <div className="flex-1 flex items-end min-w-0">
           <DayBars hours={day.hours} />
         </div>
 
         {/* Expand toggle */}
-        <div className="text-muted-foreground shrink-0 self-center">
+        <div className="text-muted-foreground shrink-0 self-center ml-2">
           {expanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
         </div>
       </button>
