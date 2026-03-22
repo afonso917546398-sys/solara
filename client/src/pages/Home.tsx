@@ -34,91 +34,65 @@ import {
   Star, Trash2, History, ThumbsUp, ThumbsDown, Info,
 } from "lucide-react";
 
-// ── Sun Score Arc ─────────────────────────────────────────────────
-function SunArc({ score, size = 64 }: { score: number; size?: number }) {
-  const r = size * 0.38;
-  const cx = size / 2;
-  const cy = size / 2;
-  const circ = 2 * Math.PI * r;
-  const dash = (score / 100) * circ;
+// ── Sun Spiral Dial ──────────────────────────────────────────────
+// 24 hour spiral: 00:00 at inner 12-o-clock, spirals clockwise outward
+// to 24:00 at outer 12-o-clock. Each hour = a trapezoid arc segment.
+function scoreToSegColor(score: number, isDay: number): string {
+  if (!isDay) return "#f1f5f9";   // night: near white
+  if (score >= 80) return "#f59e0b"; // amber
+  if (score >= 65) return "#fb923c"; // orange
+  if (score >= 45) return "#fde68a"; // yellow
+  if (score >= 25) return "#fef9c3"; // pale yellow
+  return "#f1f5f9";                  // below threshold: white
+}
 
-  let stroke = "#94a3b8";
-  if (score >= 80) stroke = "#f59e0b";
-  else if (score >= 65) stroke = "#fb923c";
-  else if (score >= 45) stroke = "#eab308";
-  else if (score >= 25) stroke = "#a8a29e";
+function polarXY(cx: number, cy: number, r: number, angleDeg: number) {
+  const rad = ((angleDeg - 90) * Math.PI) / 180;
+  return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+
+function SunDial({ hours, score, size = 60 }: {
+  hours: HourData[];
+  score: number;
+  size?: number;
+}) {
+  const cx = size / 2, cy = size / 2;
+  const rInner = size * 0.16;
+  const rOuter = size * 0.47;
+  const rStep = (rOuter - rInner) / 24;
+  const sliceAngle = 360 / 24;
+  const gap = 0.6;
+
+  const segments = Array.from({ length: 24 }, (_, i) => {
+    const h = hours.find(h => h.hour === i);
+    const color = scoreToSegColor(h?.sunScore ?? 0, h?.isDay ?? 0);
+    const r1 = rInner + i * rStep;
+    const r2 = rInner + (i + 1) * rStep;
+    const a1 = i * sliceAngle + gap / 2;
+    const a2 = (i + 1) * sliceAngle - gap / 2;
+    const p1 = polarXY(cx, cy, r1, a1);
+    const p2 = polarXY(cx, cy, r2, a1);
+    const p3 = polarXY(cx, cy, r2, a2);
+    const p4 = polarXY(cx, cy, r1, a2);
+    const la = a2 - a1 > 180 ? 1 : 0;
+    const d = `M ${p1.x} ${p1.y} L ${p2.x} ${p2.y} A ${r2} ${r2} 0 ${la} 1 ${p3.x} ${p3.y} L ${p4.x} ${p4.y} A ${r1} ${r1} 0 ${la} 0 ${p1.x} ${p1.y} Z`;
+    return { d, color, i };
+  });
+
+  let tc = "#94a3b8";
+  if (score >= 80) tc = "#f59e0b";
+  else if (score >= 65) tc = "#fb923c";
+  else if (score >= 45) tc = "#eab308";
+  else if (score >= 25) tc = "#a8a29e";
 
   return (
     <div className="relative flex items-center justify-center shrink-0" style={{ width: size, height: size }}>
-      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="currentColor"
-          strokeWidth={size * 0.07} className="text-border opacity-60" />
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke={stroke}
-          strokeWidth={size * 0.07}
-          strokeDasharray={`${dash} ${circ}`}
-          strokeLinecap="round" />
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        {segments.map(s => <path key={s.i} d={s.d} fill={s.color} />)}
+        <text x={cx} y={cy} textAnchor="middle" dominantBaseline="central"
+          fontSize={size * 0.2} fontWeight="700" fill={tc} fontFamily="sans-serif"
+        >{score}</text>
       </svg>
-      <span className="absolute font-bold" style={{ fontSize: size * 0.22, color: stroke }}>
-        {score}
-      </span>
-    </div>
-  );
-}
-
-// ── Hourly Bar Chart ──────────────────────────────────────────────
-function HourlyChart({ hours, peakWindow }: {
-  hours: HourData[];
-  peakWindow: { startHour: number; endHour: number } | null;
-}) {
-  const dayHours = hours.filter(h => h.isDay || h.sunScore > 0);
-  // Show only from 1h before sunrise to 1h after sunset
-  const relevant = hours.filter(h => h.isDay);
-  if (relevant.length === 0) return (
-    <div className="text-sm text-muted-foreground text-center py-4">No daylight data</div>
-  );
-
-  const minHour = Math.max(0, relevant[0].hour - 1);
-  const maxHour = Math.min(23, relevant[relevant.length - 1].hour + 1);
-  const visible = hours.filter(h => h.hour >= minHour && h.hour <= maxHour);
-
-  return (
-    <div className="flex flex-col gap-2">
-      {/* Bar chart */}
-      <div className="flex items-end gap-0.5 h-16">
-        {visible.map(h => {
-          const isPeak = peakWindow && h.hour >= peakWindow.startHour && h.hour < peakWindow.endHour;
-          const barH = h.isDay ? Math.max(4, (h.sunScore / 100) * 60) : 4;
-          return (
-            <div key={h.hour} className="flex flex-col items-center flex-1 group relative">
-              {/* Tooltip */}
-              <div className="absolute bottom-full mb-1 left-1/2 -translate-x-1/2 z-10
-                bg-popover border border-border rounded-lg px-2 py-1.5 text-xs whitespace-nowrap
-                opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none shadow-md">
-                <div className="font-semibold">{h.timeLabel}</div>
-                <div className="text-muted-foreground">☁ {h.cloudCover}% · UV {h.uvIndex.toFixed(1)} · {h.apparentTemp}°C</div>
-                <div className={`font-bold mt-0.5 ${scoreColor(h.sunScore)}`}>Score: {h.sunScore}</div>
-              </div>
-              <div
-                className={`w-full rounded-t transition-all ${isPeak ? 'ring-1 ring-amber-400' : ''} ${
-                  h.isDay ? hourBarColor(h.sunScore) : 'bg-slate-100 dark:bg-slate-800'
-                }`}
-                style={{ height: barH }}
-              />
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Hour labels — every 2h */}
-      <div className="flex gap-0.5">
-        {visible.map(h => (
-          <div key={h.hour} className="flex-1 text-center">
-            {h.hour % 2 === 0 && (
-              <span className="text-xs text-muted-foreground">{h.timeLabel}</span>
-            )}
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -265,7 +239,7 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
         </div>
 
         {/* Arc score */}
-        <SunArc score={day.dayScore} size={52} />
+        <SunDial hours={day.hours} score={day.dayScore} size={56} />
 
         {/* Score label + peak window */}
         <div className="flex-1 min-w-0">
@@ -294,9 +268,6 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
       {/* Expanded content */}
       {expanded && (
         <div className="border-t border-black/[0.06] dark:border-white/[0.06] px-4 pb-4 pt-3 flex flex-col gap-4">
-          {/* Hourly bar chart */}
-          <HourlyChart hours={day.hours} peakWindow={day.peakWindow} />
-
           {/* Hourly list — only daylight hours */}
           <div className="flex flex-col gap-0.5">
             {dayHours.map(h => {
