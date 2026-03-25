@@ -24,12 +24,12 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
-import type { Favourite, VerificationEntry } from "../../../shared/schema";
+import type { Favourite } from "../../../shared/schema";
 import {
   MapPin, Sun, Thermometer, Cloud, Wind,
   ChevronDown, ChevronUp, Sunrise, Sunset,
   RefreshCw, AlertCircle, Search, X,
-  Star, Trash2, History, ThumbsUp, ThumbsDown, Info,
+  Star, Trash2, Info,
 } from "lucide-react";
 
 // ── Inline Day Bar Chart ─────────────────────────────────────────
@@ -208,10 +208,6 @@ function DayCard({ day, locationName, units, ipcjExposure }: {
 
 
 
-          {/* Verification prompt — today only, after peak window */}
-          {locationName && (
-            <VerificationPrompt day={day} locationName={locationName} />
-          )}
         </div>
       )}
     </div>
@@ -727,231 +723,32 @@ function FavouritesBar({
   );
 }
 
-// ── Verification Prompt ─────────────────────────────────────────
-function VerificationPrompt({ day, locationName }: { day: DayData; locationName: string }) {
-  const qc = useQueryClient();
-  const today = new Date().toISOString().slice(0, 10);
-
-  // Only show for today after peak window has passed
-  const now = new Date();
-  const currentHour = now.getHours();
-  const peakEnded = day.peakWindow ? currentHour >= day.peakWindow.endHour : currentHour >= 15;
-  if (!day.isToday || !peakEnded) return null;
-
-  const { data: existing } = useQuery<VerificationEntry | null>({
-    queryKey: ['/api/log', today],
-    queryFn: () => apiRequest('GET', `/api/log/${today}`).then(r => r.json()),
-    staleTime: 0,
-  });
-
-  const logMutation = useMutation({
-    mutationFn: (body: object) => apiRequest('POST', '/api/log', body).then(r => r.json()),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['/api/log'] }),
-  });
-
-  const [step, setStep] = useState<'went_out' | 'accuracy' | 'done'>('went_out');
-  const [wentOut, setWentOut] = useState<boolean | null>(null);
-  const [accuracy, setAccuracy] = useState<number | null>(null);
-
-  if (existing !== undefined && existing !== null) {
-    return (
-      <div className="mt-2 pt-3 border-t border-black/[0.06] dark:border-white/[0.06]
-        flex items-center gap-2 text-xs text-muted-foreground">
-        <History size={12} />
-        Logged today — forecast matched: {'\u2B50'.repeat(existing.sunAccuracy ?? 0) || 'n/a'}
-        {existing.feltWorthIt !== null && (
-          existing.feltWorthIt ? <ThumbsUp size={12} className="text-amber-500" /> : <ThumbsDown size={12} className="text-muted-foreground" />
-        )}
-      </div>
-    );
-  }
-
-  const submitNo = () => {
-    logMutation.mutate({
-      date: today,
-      locationName,
-      forecastScore: day.dayScore,
-      peakStart: day.peakWindow?.start ?? null,
-      peakEnd: day.peakWindow?.end ?? null,
-      wentOut: 0,
-      sunAccuracy: null,
-      feltWorthIt: null,
-    });
-  };
-
-  const submitYes = (acc: number, worth: boolean) => {
-    logMutation.mutate({
-      date: today,
-      locationName,
-      forecastScore: day.dayScore,
-      peakStart: day.peakWindow?.start ?? null,
-      peakEnd: day.peakWindow?.end ?? null,
-      wentOut: 1,
-      sunAccuracy: acc,
-      feltWorthIt: worth ? 1 : 0,
-    });
-  };
-
-  return (
-    <div className="mt-2 pt-3 border-t border-amber-200/60 dark:border-amber-700/30 flex flex-col gap-2">
-      <p className="text-xs font-medium text-amber-700 dark:text-amber-400">Peak window passed — quick check-in:</p>
-
-      {step === 'went_out' && (
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-muted-foreground">Did you go out?</span>
-          <button
-            onClick={() => { setWentOut(true); setStep('accuracy'); }}
-            className="text-xs px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30
-              text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-600
-              hover:bg-amber-200 transition-colors font-medium"
-          >Yes</button>
-          <button
-            onClick={() => { setWentOut(false); submitNo(); }}
-            className="text-xs px-3 py-1 rounded-full border border-border
-              text-muted-foreground hover:bg-accent transition-colors"
-          >No</button>
-        </div>
-      )}
-
-      {step === 'accuracy' && (
-        <div className="flex flex-col gap-2">
-          <span className="text-xs text-muted-foreground">How sunny was it vs forecast?</span>
-          <div className="flex gap-1">
-            {[1,2,3,4,5].map(n => (
-              <button key={n}
-                onClick={() => setAccuracy(n)}
-                className={`text-base transition-transform hover:scale-110 ${
-                  accuracy !== null && n <= accuracy ? 'opacity-100' : 'opacity-30'
-                }`}>
-                ⭐
-              </button>
-            ))}
-          </div>
-          {accuracy !== null && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Worth it?</span>
-              <button onClick={() => submitYes(accuracy, true)}
-                className="text-xs px-3 py-1 rounded-full bg-amber-100 dark:bg-amber-900/30
-                  text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-600
-                  hover:bg-amber-200 transition-colors"
-              ><ThumbsUp size={11} className="inline mr-1" />Yes</button>
-              <button onClick={() => submitYes(accuracy, false)}
-                className="text-xs px-3 py-1 rounded-full border border-border
-                  text-muted-foreground hover:bg-accent transition-colors"
-              ><ThumbsDown size={11} className="inline mr-1" />No</button>
-            </div>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── History Section ───────────────────────────────────────────────
-function HistorySection() {
-  const [open, setOpen] = useState(false);
-  const { data: logs = [] } = useQuery<VerificationEntry[]>({
-    queryKey: ['/api/log'],
-    staleTime: 0,
-  });
-
-  if (logs.length === 0) return null;
-
-  return (
-    <div className="flex flex-col gap-2">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <History size={14} />
-        Check-in history ({logs.length})
-        {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-      </button>
-
-      {open && (
-        <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border bg-muted/40">
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Date</th>
-                <th className="text-left px-3 py-2 font-medium text-muted-foreground">Location</th>
-                <th className="text-center px-3 py-2 font-medium text-muted-foreground">Forecast</th>
-                <th className="text-center px-3 py-2 font-medium text-muted-foreground">Went out</th>
-                <th className="text-center px-3 py-2 font-medium text-muted-foreground">Accuracy</th>
-                <th className="text-center px-3 py-2 font-medium text-muted-foreground">Worth it</th>
-              </tr>
-            </thead>
-            <tbody>
-              {logs.map(log => (
-                <tr key={log.id} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                  <td className="px-3 py-2 text-muted-foreground">{log.date}</td>
-                  <td className="px-3 py-2 font-medium">{log.locationName}</td>
-                  <td className="px-3 py-2 text-center">
-                    <span className={scoreColor(log.forecastScore)}>{log.forecastScore}</span>
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    {log.wentOut ? '✔️' : '❌'}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    {log.sunAccuracy ? '⭐'.repeat(log.sunAccuracy) : '—'}
-                  </td>
-                  <td className="px-3 py-2 text-center">
-                    {log.feltWorthIt === null ? '—' : log.feltWorthIt ? <ThumbsUp size={12} className="inline text-amber-500" /> : <ThumbsDown size={12} className="inline text-muted-foreground" />}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-    </div>
-  );
-}
-
 // ── Accuracy Section ──────────────────────────────────────────────
-function AccuracySection({
-  lat, lon, logs, units
-}: {
-  lat: number;
-  lon: number;
-  logs: import("../../../shared/schema").VerificationEntry[];
-  units: UnitSystem;
-}) {
+function AccuracySection({ lat, lon, units }: { lat: number; lon: number; units: UnitSystem }) {
   const [open, setOpen] = useState(false);
 
-  const { data: actuals, isLoading, isError } = useQuery<DayAccuracy[]>({
+  const { data: rows, isLoading, isError } = useQuery<DayAccuracy[]>({
     queryKey: ['accuracy', lat, lon],
     queryFn: () => fetchActualScores(lat, lon),
     enabled: open,
-    staleTime: 1000 * 60 * 60, // 1 hour
+    staleTime: 1000 * 60 * 60,
     retry: 1,
   });
 
-  // Merge check-in log scores into actuals
-  const rows = actuals?.map(a => {
-    const log = logs.find(l => l.date === a.date);
-    const forecastScore = log?.forecastScore ?? null;
-    const delta = forecastScore !== null ? a.actualScore - forecastScore : null;
-    return { ...a, forecastScore, delta };
-  }) ?? [];
-
-  // Bias summary
-  const diffs = rows.filter(r => r.delta !== null).map(r => r.delta as number);
-  const avgBias = diffs.length > 0
-    ? Math.round(diffs.reduce((a, b) => a + b, 0) / diffs.length)
-    : null;
-
-  function deltaColor(d: number | null) {
-    if (d === null) return 'text-muted-foreground';
-    if (d > 8) return 'text-emerald-600 dark:text-emerald-400';
-    if (d < -8) return 'text-red-500 dark:text-red-400';
-    return 'text-muted-foreground';
-  }
-
-  function deltaLabel(d: number | null) {
-    if (d === null) return '—';
-    if (d > 0) return `+${d}`;
-    return `${d}`;
+  function delta(a: number, f: number, invert = false) {
+    const d = Math.round((a - f) * 10) / 10;
+    if (d === 0) return <span className="text-muted-foreground/40">—</span>;
+    // For cloud and wind: positive delta (actual higher) is bad → show orange
+    // For rad, UV, temp: positive delta (actual higher) is good → show green
+    const isGood = invert ? d < 0 : d > 0;
+    const sign = d > 0 ? '+' : '';
+    return (
+      <span className={isGood
+        ? 'text-emerald-600 dark:text-emerald-400 font-medium'
+        : 'text-orange-500 dark:text-orange-400 font-medium'}>
+        {sign}{d}
+      </span>
+    );
   }
 
   return (
@@ -966,70 +763,61 @@ function AccuracySection({
       </button>
 
       {open && (
-        <div className="flex flex-col gap-3">
-          {/* Bias summary */}
-          {avgBias !== null && (
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <span>Average bias:</span>
-              <span className={`font-semibold ${deltaColor(avgBias)}`}>
-                {deltaLabel(avgBias)} pts
-              </span>
-              <span className="opacity-60">
-                {avgBias > 3 ? '(forecast under-predicts)'
-                  : avgBias < -3 ? '(forecast over-predicts)'
-                  : '(well calibrated)'}
-              </span>
-            </div>
-          )}
-
-          {isLoading && <Skeleton className="h-32 rounded-xl" />}
-
-          {isError && (
-            <p className="text-xs text-muted-foreground">Could not load historical data.</p>
-          )}
-
-          {rows.length > 0 && (
-            <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40">
-                    <th className="text-left px-3 py-2 font-medium text-muted-foreground">Date</th>
-                    <th className="text-center px-3 py-2 font-medium text-muted-foreground">Forecast</th>
-                    <th className="text-center px-3 py-2 font-medium text-muted-foreground">Actual</th>
-                    <th className="text-center px-3 py-2 font-medium text-muted-foreground">Delta</th>
-                    <th className="text-center px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Cloud</th>
-                    <th className="text-center px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">UV</th>
-                    <th className="text-center px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Rad</th>
-                    <th className="text-center px-3 py-2 font-medium text-muted-foreground hidden sm:table-cell">Wind</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map(row => (
-                    <tr key={row.date} className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors">
-                      <td className="px-3 py-2 text-muted-foreground">{row.date}</td>
-                      <td className="px-3 py-2 text-center">
-                        {row.forecastScore !== null
-                          ? <span className={scoreColor(row.forecastScore)}>{row.forecastScore}</span>
-                          : <span className="text-muted-foreground/40">—</span>}
-                      </td>
-                      <td className="px-3 py-2 text-center">
-                        <span className={scoreColor(row.actualScore)}>{row.actualScore}</span>
-                      </td>
-                      <td className={`px-3 py-2 text-center font-medium ${deltaColor(row.delta)}`}>
-                        {deltaLabel(row.delta)}
-                      </td>
-                      <td className="px-3 py-2 text-center text-muted-foreground hidden sm:table-cell">{row.cloudActual}%</td>
-                      <td className="px-3 py-2 text-center text-muted-foreground hidden sm:table-cell">{row.uvActual}</td>
-                      <td className="px-3 py-2 text-center text-muted-foreground hidden sm:table-cell">{row.radActual}W</td>
-                      <td className="px-3 py-2 text-center text-muted-foreground hidden sm:table-cell">{fmtWind(row.windActual, units)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div className="px-3 py-2 border-t border-border text-xs text-muted-foreground/60">
-                Actuals from Open-Meteo Historical API. Delta = actual − forecast (positive = under-predicted).
-                Forecast scores only available for days with check-ins.
-              </div>
+        <div className="flex flex-col gap-2">
+          {isLoading && <Skeleton className="h-40 rounded-xl" />}
+          {isError && <p className="text-xs text-muted-foreground">Could not load historical data.</p>}
+          {rows && rows.length > 0 && (
+            <div className="flex flex-col gap-2">
+              {rows.map(row => {
+                const h = row.bestHour;
+                const hourLabel = `${String(h.hour).padStart(2, '0')}:00`;
+                const scoreD = h.aScore - h.fScore;
+                const scoreDStr = scoreD === 0 ? '—' : (scoreD > 0 ? `+${scoreD}` : `${scoreD}`);
+                const scoreDColor = scoreD > 5 ? 'text-emerald-600 dark:text-emerald-400'
+                  : scoreD < -5 ? 'text-orange-500 dark:text-orange-400'
+                  : 'text-muted-foreground/60';
+                return (
+                  <div key={row.date} className="bg-card border border-border rounded-xl overflow-hidden">
+                    {/* Header: date + best hour + score comparison */}
+                    <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-foreground">{row.weekday}</span>
+                        <span className="text-[10px] text-muted-foreground">{row.date}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className="text-muted-foreground">best hour: {hourLabel}</span>
+                        <span className="text-muted-foreground">·</span>
+                        <span className="text-muted-foreground">forecast <span className={scoreColor(h.fScore)}>{h.fScore}</span></span>
+                        <span className="text-muted-foreground">→</span>
+                        <span className="text-muted-foreground">actual <span className={scoreColor(h.aScore)}>{h.aScore}</span></span>
+                        <span className={`font-semibold text-[10px] ${scoreDColor}`}>{scoreDStr}</span>
+                      </div>
+                    </div>
+                    {/* Variable comparison grid */}
+                    <div className="grid grid-cols-5 text-[10px]">
+                      {[
+                        { label: '⚡ Rad', f: `${h.fRad}`, a: `${h.aRad}`, d: delta(h.aRad, h.fRad) },
+                        { label: '☁ Cloud', f: `${h.fCloud}%`, a: `${h.aCloud}%`, d: delta(h.aCloud, h.fCloud, true) },
+                        { label: '☀ UV', f: `${h.fUV}`, a: `${h.aUV}`, d: delta(h.aUV, h.fUV) },
+                        { label: '🌡 Temp', f: fmtTemp(h.fTemp, units), a: fmtTemp(h.aTemp, units), d: delta(h.aTemp, h.fTemp) },
+                        { label: '🌬 Wind', f: fmtWind(h.fWind, units), a: fmtWind(h.aWind, units), d: delta(h.aWind, h.fWind, true) },
+                      ].map(v => (
+                        <div key={v.label} className="flex flex-col items-center gap-0.5 px-1 py-2 border-r border-border last:border-r-0">
+                          <span className="text-muted-foreground font-medium mb-1">{v.label}</span>
+                          <span className="text-muted-foreground/60">fcst</span>
+                          <span className="text-foreground font-medium">{v.f}</span>
+                          <span className="text-muted-foreground/60 mt-1">actual</span>
+                          <span className="text-foreground font-medium">{v.a}</span>
+                          <span className="mt-1">{v.d}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+              <p className="text-[10px] text-muted-foreground/50 text-center">
+                Forecast: Open-Meteo forecast model · Actual: ERA5 reanalysis archive · Delta = actual − forecast
+              </p>
             </div>
           )}
         </div>
@@ -1037,6 +825,7 @@ function AccuracySection({
     </div>
   );
 }
+
 
 // ── Main App ──────────────────────────────────────────────────────
 export default function Home() {
@@ -1084,13 +873,6 @@ export default function Home() {
     enabled: !!location,
     staleTime: 1000 * 60 * 30,
     retry: 1,
-  });
-
-  // Logs needed for accuracy section
-  const { data: logsData = [] } = useQuery<import("../../../shared/schema").VerificationEntry[]>({
-    queryKey: ['/api/log'],
-    staleTime: 0,
-    enabled: !!location,
   });
 
   const saveFavouriteMutation = useMutation({
@@ -1209,12 +991,10 @@ export default function Home() {
               ))}
             </div>
 
-            {/* History + Accuracy */}
-            <HistorySection />
+            {/* Accuracy */}
             <AccuracySection
               lat={location.lat}
               lon={location.lon}
-              logs={logsData}
               units={units}
             />
           </>

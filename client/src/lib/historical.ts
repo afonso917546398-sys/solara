@@ -1,111 +1,161 @@
 import { calcHourScore } from "./weather";
 
-export interface DayAccuracy {
-  date: string;         // yyyy-mm-dd
-  forecastScore: number;
-  actualScore: number;
-  delta: number;        // actual - forecast (positive = under-predicted, negative = over-predicted)
-  cloudActual: number;
-  uvActual: number;
-  radActual: number;
-  windActual: number;
-  tempActual: number;
+export interface HourDetail {
+  hour: number;
+  // Forecast (model) values
+  fRad: number;
+  fCloud: number;
+  fUV: number;
+  fTemp: number;
+  fWind: number;
+  fScore: number;
+  // Actual (archive reanalysis) values
+  aRad: number;
+  aCloud: number;
+  aUV: number;
+  aTemp: number;
+  aWind: number;
+  aScore: number;
 }
 
+export interface DayAccuracy {
+  date: string;       // yyyy-mm-dd
+  weekday: string;
+  bestHour: HourDetail;
+}
+
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+function fmt(d: Date) { return d.toISOString().slice(0, 10); }
+
 /**
- * Fetch past 7 days of actual weather data from Open-Meteo historical API
- * and compute what the score would have been using real measurements.
+ * Fetch past 7 days: forecast model values (past_days) + archive reanalysis.
+ * For each day find the hour with the highest actual score and return
+ * a side-by-side comparison of all variables at that hour.
  */
 export async function fetchActualScores(
   lat: number,
   lon: number
 ): Promise<DayAccuracy[]> {
-  // Build date range: 7 days ago to yesterday
   const today = new Date();
   const end = new Date(today);
-  end.setDate(end.getDate() - 1);
+  end.setDate(end.getDate() - 1);          // yesterday
   const start = new Date(today);
-  start.setDate(start.getDate() - 7);
+  start.setDate(start.getDate() - 7);      // 7 days ago
 
-  const fmt = (d: Date) => d.toISOString().slice(0, 10);
-
-  const url = new URL("https://archive-api.open-meteo.com/v1/archive");
-  url.searchParams.set("latitude", lat.toString());
-  url.searchParams.set("longitude", lon.toString());
-  url.searchParams.set("start_date", fmt(start));
-  url.searchParams.set("end_date", fmt(end));
-  url.searchParams.set("hourly", [
+  const vars = [
+    "direct_radiation",
     "cloud_cover",
     "uv_index",
-    "direct_radiation",
-    "wind_speed_10m",
     "apparent_temperature",
-    "temperature_2m",
+    "wind_speed_10m",
     "weather_code",
     "is_day",
-  ].join(","));
-  url.searchParams.set("timezone", "auto");
+  ].join(",");
 
-  const res = await fetch(url.toString());
-  if (!res.ok) throw new Error("Historical API error");
-  const data = await res.json();
+  // ── Forecast API (past_days) — model forecast values ──────────────
+  const fUrl = new URL("https://api.open-meteo.com/v1/forecast");
+  fUrl.searchParams.set("latitude", lat.toString());
+  fUrl.searchParams.set("longitude", lon.toString());
+  fUrl.searchParams.set("hourly", vars);
+  fUrl.searchParams.set("past_days", "7");
+  fUrl.searchParams.set("forecast_days", "1");
+  fUrl.searchParams.set("timezone", "auto");
 
-  const { hourly } = data;
-  const times: string[] = hourly.time;
+  // ── Archive API — actual reanalysis values ──────────────────────────
+  const aUrl = new URL("https://archive-api.open-meteo.com/v1/archive");
+  aUrl.searchParams.set("latitude", lat.toString());
+  aUrl.searchParams.set("longitude", lon.toString());
+  aUrl.searchParams.set("start_date", fmt(start));
+  aUrl.searchParams.set("end_date", fmt(end));
+  aUrl.searchParams.set("hourly", vars);
+  aUrl.searchParams.set("timezone", "auto");
 
-  // Group by date and compute daily score from actuals
-  const dayMap = new Map<string, number[]>();
+  const [fRes, aRes] = await Promise.all([fetch(fUrl.toString()), fetch(aUrl.toString())]);
+  if (!fRes.ok || !aRes.ok) throw new Error("Historical API error");
+  const [fData, aData] = await Promise.all([fRes.json(), aRes.json()]);
 
-  times.forEach((t, i) => {
-    const date = t.split("T")[0];
-    const hour = parseInt(t.split("T")[1].slice(0, 2), 10);
+  // ── Index both by "yyyy-mm-ddThh" ──────────────────────────────────
+  function indexByHour(data: any) {
+    const map = new Map<string, number>();
+    (data.hourly.time as string[]).forEach((t, i) => map.set(t, i));
+    return { map, h: data.hourly };
+  }
 
-    const hBase = {
-      hour,
-      timeLabel: `${String(hour).padStart(2, "0")}:00`,
-      cloudCover: hourly.cloud_cover[i] ?? 100,
-      uvIndex: hourly.uv_index[i] ?? 0,
-      temperature: hourly.temperature_2m[i] ?? 10,
-      apparentTemp: hourly.apparent_temperature[i] ?? 10,
-      directRadiation: hourly.direct_radiation[i] ?? 0,
-      windSpeed: Math.round(hourly.wind_speed_10m[i] ?? 0),
-      isDay: hourly.is_day[i] ?? 0,
-      weatherCode: hourly.weather_code[i] ?? 0,
-    };
+  const f = indexByHour(fData);
+  const a = indexByHour(aData);
 
-    const score = calcHourScore(hBase);
-    if (!dayMap.has(date)) dayMap.set(date, []);
-    if (hBase.isDay) dayMap.get(date)!.push(score);
-  });
-
-  // Compute daily actual score (average of daylight hours, weighted to peak)
+  // ── For each date in range, find best actual hour ───────────────────
   const results: DayAccuracy[] = [];
 
-  for (const [date, scores] of dayMap.entries()) {
-    if (scores.length === 0) continue;
+  for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    const dateStr = fmt(d);
+    const weekday = WEEKDAYS[d.getDay()];
 
-    const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
-    const peak = Math.max(...scores);
-    const actualScore = Math.round(avg * 0.5 + peak * 0.5);
+    // Collect all daylight hours with actual scores
+    const hours: Array<{ hour: number; aScore: number }> = [];
+    for (let h = 0; h < 24; h++) {
+      const key = `${dateStr}T${String(h).padStart(2, '0')}:00`;
+      const ai = a.map.get(key);
+      if (ai === undefined) continue;
+      if (!(a.h.is_day[ai])) continue;
 
-    // Get representative afternoon values for display
-    const idx = times.findIndex(t => t.startsWith(date) && t.includes("T13:"));
-    const cloudActual = idx >= 0 ? Math.round(hourly.cloud_cover[idx] ?? 0) : 0;
-    const uvActual = idx >= 0 ? Math.round((hourly.uv_index[idx] ?? 0) * 10) / 10 : 0;
-    const radActual = idx >= 0 ? Math.round(hourly.direct_radiation[idx] ?? 0) : 0;
-    const windActual = idx >= 0 ? Math.round(hourly.wind_speed_10m[idx] ?? 0) : 0;
-    const tempActual = idx >= 0 ? Math.round(hourly.apparent_temperature[idx] ?? 0) : 0;
+      const aHour = {
+        hour: h,
+        timeLabel: `${String(h).padStart(2, '0')}:00`,
+        directRadiation: a.h.direct_radiation[ai] ?? 0,
+        cloudCover: a.h.cloud_cover[ai] ?? 100,
+        uvIndex: a.h.uv_index[ai] ?? 0,
+        apparentTemp: a.h.apparent_temperature[ai] ?? 10,
+        windSpeed: Math.round(a.h.wind_speed_10m[ai] ?? 0),
+        isDay: a.h.is_day[ai] ?? 0,
+        weatherCode: a.h.weather_code[ai] ?? 0,
+        temperature: a.h.apparent_temperature[ai] ?? 10,
+      };
+      hours.push({ hour: h, aScore: calcHourScore(aHour) });
+    }
+
+    if (hours.length === 0) continue;
+
+    // Best actual hour
+    const best = hours.reduce((a, b) => b.aScore > a.aScore ? b : a);
+    const bh = best.hour;
+    const aKey = `${dateStr}T${String(bh).padStart(2, '0')}:00`;
+    const fKey = aKey;
+    const ai = a.map.get(aKey)!;
+    const fi = f.map.get(fKey);
+
+    const aRad   = Math.round(a.h.direct_radiation[ai] ?? 0);
+    const aCloud = Math.round(a.h.cloud_cover[ai] ?? 0);
+    const aUV    = Math.round((a.h.uv_index[ai] ?? 0) * 10) / 10;
+    const aTemp  = Math.round((a.h.apparent_temperature[ai] ?? 0) * 10) / 10;
+    const aWind  = Math.round(a.h.wind_speed_10m[ai] ?? 0);
+    const aScore = best.aScore;
+
+    const fRad   = fi !== undefined ? Math.round(f.h.direct_radiation[fi] ?? 0) : aRad;
+    const fCloud = fi !== undefined ? Math.round(f.h.cloud_cover[fi] ?? 0) : aCloud;
+    const fUV    = fi !== undefined ? Math.round((f.h.uv_index[fi] ?? 0) * 10) / 10 : aUV;
+    const fTemp  = fi !== undefined ? Math.round((f.h.apparent_temperature[fi] ?? 0) * 10) / 10 : aTemp;
+    const fWind  = fi !== undefined ? Math.round(f.h.wind_speed_10m[fi] ?? 0) : aWind;
+
+    const fHour = {
+      hour: bh,
+      timeLabel: aKey.slice(11),
+      directRadiation: fRad,
+      cloudCover: fCloud,
+      uvIndex: fUV,
+      apparentTemp: fTemp,
+      windSpeed: fWind,
+      isDay: 1,
+      weatherCode: fi !== undefined ? (f.h.weather_code[fi] ?? 0) : 0,
+      temperature: fTemp,
+    };
+    const fScore = calcHourScore(fHour);
 
     results.push({
-      date,
-      forecastScore: 0, // filled in by UI from check-in log if available
-      actualScore,
-      delta: 0,
-      cloudActual,
-      uvActual,
-      radActual,
-      windActual,
-      tempActual,
+      date: dateStr,
+      weekday,
+      bestHour: { hour: bh, fRad, fCloud, fUV, fTemp, fWind, fScore, aRad, aCloud, aUV, aTemp, aWind, aScore },
     });
   }
 
