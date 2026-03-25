@@ -262,6 +262,9 @@ function IntroScreen({ onDone }: { onDone: () => void }) {
             Dialing in on sunny times.
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
+            Other apps show you the forecast. Solara scores it for people who need the sun.
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
             This app was designed for Superman. He absorbs sun radiation and uses it
             for his daily hero activities. All others using it should exercise caution
             and heed health authorities' recommendations on sun exposure.
@@ -346,6 +349,9 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
           <h1 className="text-xl font-bold text-foreground mb-1.5">Solara</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
             Dialing in on sunny times.
+          </p>
+          <p className="text-sm text-muted-foreground leading-relaxed mt-1">
+            Other apps show you the forecast. Solara scores it for people who need the sun.
           </p>
           <p className="text-xs text-muted-foreground/70 mt-2 leading-relaxed max-w-xs mx-auto">
             This app was designed for Superman. He absorbs sun radiation and uses it for his daily hero activities.
