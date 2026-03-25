@@ -17,11 +17,7 @@ import {
 } from "@/lib/weather";
 import { defaultIpcjExposure, type IpcjExposure } from "@/lib/ipcj";
 import { ipcjWindFactor } from "@/lib/corrections";
-import {
-  calcExposureMinutes,
-  bestExposureHour,
-  SKIN_TYPES,
-} from "@/lib/exposure";
+
 import { fmtTemp, fmtWind, type UnitSystem } from "@/lib/units";
 import { fetchActualScores, type DayAccuracy } from "@/lib/historical";
 import { Button } from "@/components/ui/button";
@@ -160,46 +156,6 @@ function HourRow({ h, units, ipcjExposure, dayMonth }: { h: HourData; units: Uni
   );
 }
 
-// ── Exposure Widget ──────────────────────────────────────────────
-function ExposureWidget({ day, skinTypeId, onChangeSkin, units }: {
-  day: DayData;
-  skinTypeId: number;
-  onChangeSkin: (id: number) => void;
-  units: UnitSystem;
-}) {
-  const best = bestExposureHour(day.hours);
-  if (!best) return null;
-
-  const minutes = calcExposureMinutes(best.uvIndex, skinTypeId);
-  if (!minutes) return null;
-
-  const skin = SKIN_TYPES.find(s => s.id === skinTypeId)!;
-
-  return (
-    <div className="border-t border-black/[0.05] dark:border-white/[0.05] pt-3 flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-3">
-        {/* Estimate */}
-        <p className="text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">~{minutes} min</span> at {best.timeLabel}
-          {' '}— UV {best.uvIndex.toFixed(1)}, {skin.label}
-        </p>
-        {/* Skin selector — minimal dropdown */}
-        <select
-          value={skinTypeId}
-          onChange={e => onChangeSkin(Number(e.target.value))}
-          className="text-xs text-muted-foreground bg-transparent border-none
-            cursor-pointer hover:text-foreground transition-colors outline-none
-            appearance-none pr-1"
-          title="Change skin type"
-        >
-          {SKIN_TYPES.map(s => (
-            <option key={s.id} value={s.id}>{s.label} — {s.description}</option>
-          ))}
-        </select>
-      </div>
-    </div>
-  );
-}
 
 // ── Day Card ──────────────────────────────────────────────────────
 function DayCard({ day, locationName, units, ipcjExposure }: {
@@ -549,49 +505,28 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
         {/* Content */}
         <div className="px-5 py-4 flex flex-col gap-6 text-sm">
 
-          {/* How it works */}
-          <div>
-            <h3 className="font-semibold text-foreground mb-2">How the index works</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              The Afonso Sun-Lover Index scores each daylight hour 0–100 based on four additive terms
-              (temperature, solar radiation, cloud cover, UV index), then applies a continuous wind
-              multiplier. Higher scores mean hotter, sunnier, higher-UV, lower-wind conditions.
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
-              <strong className="text-foreground">This is a personal preference index, not a health-safety
-              recommendation.</strong> Conditions that score highest — high UV, high heat, strong direct sun —
-              also carry the greatest risk of sunburn, heat stress, and UV overexposure for most people.
-              Use the exposure time estimates to stay within safe limits for your skin type.
-            </p>
-            <div className="mt-2 bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground">
-              <div className="font-semibold text-foreground mb-1">Term weights (max base = 100)</div>
-              <div className="flex flex-col gap-0.5">
-                <div><span className="font-medium text-foreground">Temperature</span> — apparentTemp 10–40°C → 0–25 pts. Linear.</div>
-                <div><span className="font-medium text-foreground">Solar radiation</span> — directRadiation 0–800 W/m² → 0–45 pts. Linear. Carries more weight as it physically encodes cloud conditions.</div>
-                <div><span className="font-medium text-foreground">Cloud cover</span> — cloudCover 0–100% → 15–0 pts. Inverted linear (reduced weight to avoid double-penalising with radiation).</div>
-                <div><span className="font-medium text-foreground">UV index</span> — uvIndex 0–10 → 0–15 pts. Linear.</div>
-                <div className="mt-1"><span className="font-medium text-foreground">Wind multiplier</span> — ≤15 km/h: ×1.0 · 15–30: ×1.0→0.7 · 30–50: ×0.7→0.4 · &gt;50: ×0.3</div>
-              </div>
-            </div>
-          </div>
-
           {/* Score labels */}
           <div>
-            <h3 className="font-semibold text-foreground mb-2">Score labels</h3>
-            <div className="flex flex-col gap-2">
+            <h3 className="font-semibold text-foreground mb-1">Score labels</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+              Each daylight hour is scored 0–100. The score reflects how good conditions are
+              for being outdoors in the sun — combining light quality, warmth, and wind comfort.
+            </p>
+            <div className="flex flex-col gap-2.5">
               {[
-                { label: "Prime sun",  range: "80–100", color: "bg-orange-600", desc: "Strong UV, clear sky, warm. Maximum benefit per minute outdoors." },
-                { label: "Good sun",    range: "65–79",  color: "bg-yellow-500", desc: "All thresholds met. Minor cloud or lower radiation — still worthwhile." },
-                { label: "Fair sun",   range: "45–64",  color: "bg-yellow-200 border border-yellow-300", desc: "Qualifying but suboptimal. Longer sessions needed." },
-                { label: "Weak sun",    range: "25–44",  color: "bg-gray-300",   desc: "One or more variables barely above threshold. Very extended time required." },
-                { label: "No sun",      range: "0–24",   color: "bg-gray-200",   desc: "Below qualification thresholds. UV or radiation insufficient." },
+                { label: "Prime sun",  range: "80–100", color: "#ea580c", desc: "Exceptional. High radiation, strong UV, warm temperature, low wind. Rare outside peak summer." },
+                { label: "Good sun",   range: "65–79",  color: "#eab308", desc: "Solid conditions across all variables. Proper beach or terrace weather." },
+                { label: "Fair sun",   range: "45–64",  color: "#fef08a", border: true, desc: "One variable is limiting — cold, partial cloud, or elevated wind. Still worth going out." },
+                { label: "Weak sun",   range: "25–44",  color: "#d1d5db", desc: "Conditions are marginal. A clear cold winter day, or warm but overcast. Brief benefit only." },
+                { label: "No sun",     range: "0–24",   color: "#e5e7eb", desc: "Overcast, rainy, foggy, or night. Score carries no meaningful signal." },
               ].map(s => (
                 <div key={s.label} className="flex items-start gap-3">
-                  <span className={`w-2.5 h-2.5 rounded-full shrink-0 mt-1 ${s.color}`} />
+                  <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1"
+                    style={{ backgroundColor: s.color, border: s.border ? '1px solid #ca8a04' : undefined }} />
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-baseline gap-2">
                       <span className="text-xs font-semibold text-foreground">{s.label}</span>
-                      <span className="text-[10px] text-muted-foreground">{s.range}</span>
+                      <span className="text-[10px] text-muted-foreground font-mono">{s.range}</span>
                     </div>
                     <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{s.desc}</p>
                   </div>
@@ -600,209 +535,126 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
-          {/* Variable comfort zones */}
-          <div className="flex flex-col gap-4">
-            <h3 className="font-semibold text-foreground">Variable comfort zones</h3>
-
-            {/* UV Index */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-foreground">UV Index</span>
-                <span className="text-[10px] text-muted-foreground">Floor: UV 3 · WHO / GrassrootsHealth</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                {[
-                  { range: "< 2",   label: "Vitamin D winter", color: "bg-gray-200",   note: "No practical UVB synthesis. Defined as 'Vitamin D Winter' in the literature — no effective dose possible regardless of exposure duration. (Nutrients, 2024)" },
-                  { range: "2–2.9", label: "Insufficient",     color: "bg-gray-300",   note: "UVB present but below the synthesis threshold. No meaningful vitamin D produced. (WHO UV Index)" },
-                  { range: "3–4.9", label: "Qualifying",       color: "bg-yellow-200", note: "UVB synthesis begins. ~20–30 min needed for Fitzpatrick Type II skin at UV 3.5. (Overcoming MS; WHO)" },
-                  { range: "5–7.9", label: "Good",             color: "bg-yellow-400", note: "Effective range. 10–15 min for Type II skin. Optimal window for vitamin D and mood. (Holick, NEJM 2007)" },
-                  { range: "8–10",  label: "Excellent",        color: "bg-orange-500", note: "Peak synthesis. 5–10 min for Type II. Longer exposure raises burn risk without additional D gain. (SunSmart)" },
-                  { range: "> 10",  label: "Very high",        color: "bg-red-400 text-white", note: "Equatorial or high-altitude summer. Limit unprotected exposure to under 5 min. (WHO)" },
-                ].map(r => (
-                  <div key={r.range} className="flex items-start gap-2">
-                    <div className={`w-12 shrink-0 text-[10px] font-mono text-center py-0.5 rounded ${r.color}`}>{r.range}</div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-semibold text-foreground">{r.label} — </span>
-                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.note}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Direct radiation */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-foreground">Direct radiation (W/m²)</span>
-                <span className="text-[10px] text-muted-foreground">Floor: 120 W/m²</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                {[
-                  { range: "< 50",    label: "Negligible",      color: "bg-gray-200",   note: "Night or deep cloud. No solar irradiance reaching surface." },
-                  { range: "50–120",  label: "Below threshold", color: "bg-gray-300",   note: "Heavy cloud or very low sun angle. Too weak for practical benefit outdoors." },
-                  { range: "120–250", label: "Marginal",        color: "bg-yellow-200", note: "Moderately cloudy or early/late low-angle sun. Sessions need to be longer to compensate." },
-                  { range: "250–500", label: "Good",            color: "bg-yellow-400", note: "Clear-sky morning or afternoon. Meaningful dose achievable in 15–30 min." },
-                  { range: "500–700", label: "Excellent",       color: "bg-orange-400", note: "Strong direct sun. Mid-morning to mid-afternoon in spring/summer Portugal. (Open-Meteo archive)" },
-                  { range: "> 700",   label: "Peak summer",     color: "bg-orange-600", note: "Peak summer midday irradiance in Iberia. Maximum synthesis rate. (Aug 2025 Lendiosa: 736 W/m² at noon)" },
-                ].map(r => (
-                  <div key={r.range} className="flex items-start gap-2">
-                    <div className={`w-14 shrink-0 text-[10px] font-mono text-center py-0.5 rounded ${r.color}`}>{r.range}</div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-semibold text-foreground">{r.label} — </span>
-                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.note}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Cloud cover */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-foreground">Cloud cover</span>
-                <span className="text-[10px] text-muted-foreground">Ceiling: 75% · PubMed 23108371</span>
-              </div>
-              <div className="flex flex-col gap-1">
-                {[
-                  { range: "0–10%",   label: "Clear sky",        color: "bg-orange-400", note: "Maximum irradiance. No cloud penalty. Scores driven purely by UV and radiation." },
-                  { range: "10–40%",  label: "Mostly clear",     color: "bg-yellow-400", note: "Light cloud diffuses some radiation. Minor effect on synthesis." },
-                  { range: "40–75%",  label: "Partly cloudy",    color: "bg-yellow-200", note: "Noticeable reduction. Exposure time needs to increase to compensate." },
-                  { range: "75–87%",  label: "Above threshold",  color: "bg-gray-300",   note: "6.5+ octas. Vitamin D exposure time more than doubles above this level. Score capped. (Photochem Photobiol Sci, 2012)" },
-                  { range: "> 87%",   label: "Overcast",         color: "bg-gray-400",   note: "7.5+ octas. UVD irradiance at just 45% of clear-sky value. Practically ineffective. (PubMed 23108371)" },
-                ].map(r => (
-                  <div key={r.range} className="flex items-start gap-2">
-                    <div className={`w-12 shrink-0 text-[10px] font-mono text-center py-0.5 rounded ${r.color}`}>{r.range}</div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-semibold text-foreground">{r.label} — </span>
-                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.note}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Temperature */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-foreground">Feels-like temperature</span>
-                <span className="text-[10px] text-muted-foreground">Floor: 8°C</span>
-              </div>
-              <p className="text-[10px] text-muted-foreground mb-1.5 leading-relaxed">
-                Temperature doesn't block UV, but determines how much skin you'll expose —
-                and therefore how much vitamin D you can synthesise. Feels-like accounts for wind chill.
-              </p>
-              <div className="flex flex-col gap-1">
-                {[
-                  { range: "< 8°C",   label: "Too cold",    color: "bg-gray-300",   note: "Not enough skin exposed in practice for meaningful synthesis. Score capped at 30." },
-                  { range: "8–12°C",  label: "Marginal",    color: "bg-yellow-200", note: "Chilly. Face and forearms possible at minimum, but sessions should be brief." },
-                  { range: "12–18°C", label: "Comfortable", color: "bg-yellow-400", note: "Typical spring Portugal. Arms and legs exposable for a normal session." },
-                  { range: "18–26°C", label: "Ideal",       color: "bg-orange-400", note: "Warm enough to expose significant skin area. Maximum synthesis efficiency." },
-                  { range: "> 26°C",  label: "Hot",         color: "bg-orange-600", note: "Excellent for synthesis. Limit unprotected session to recommended time for your skin type." },
-                ].map(r => (
-                  <div key={r.range} className="flex items-start gap-2">
-                    <div className={`w-14 shrink-0 text-[10px] font-mono text-center py-0.5 rounded ${r.color}`}>{r.range}</div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-semibold text-foreground">{r.label} — </span>
-                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.note}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Wind */}
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-xs font-semibold text-foreground">Wind speed</span>
-                <span className="text-[10px] text-muted-foreground">Beaufort scale · comfort penalty only</span>
-              </div>
-              <p className="text-[10px] text-muted-foreground mb-1.5 leading-relaxed">
-                Wind does not block UV. Penalty reflects whether you'll comfortably stay
-                outside long enough to benefit — derived from Beaufort scale descriptions.
-              </p>
-              <div className="flex flex-col gap-1">
-                {[
-                  { range: "< 29 km/h",  bf: "B≤4", pts: "0",   color: "bg-orange-400", desc: "Calm to moderate breeze. No effect on comfort." },
-                  { range: "29–38 km/h", bf: "B5",  pts: "−5",  color: "bg-yellow-300", desc: "Fresh breeze. Small trees sway; noticeably uncomfortable for extended stays." },
-                  { range: "39–49 km/h", bf: "B6",  pts: "−10", color: "bg-gray-300",   desc: "Strong breeze. Large branches move; hard to maintain prolonged skin exposure." },
-                  { range: "≥ 50 km/h",  bf: "B7+", pts: "−15", color: "bg-gray-400",   desc: "Near gale. Whole trees in motion; most people will not stay outside." },
-                ].map(r => (
-                  <div key={r.range} className="flex items-start gap-2">
-                    <div className={`w-18 shrink-0 text-[10px] font-mono text-center py-0.5 rounded px-1 ${r.color}`}>{r.range}</div>
-                    <div className="flex-1 min-w-0">
-                      <span className="text-[10px] font-semibold text-foreground">{r.bf} · {r.pts} pts — </span>
-                      <span className="text-[10px] text-muted-foreground leading-relaxed">{r.desc}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* IPCJ correction note */}
-          <div className="bg-muted/40 rounded-xl p-3 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-foreground">Nortada wind correction</span>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              The Iberian Peninsula Coastal Low-Level Jet (IPCJ) — the summer northerly wind
-              known as the Nortada — is systematically underestimated by weather models (ERA5/Open-Meteo)
-              at west-facing Atlantic beaches. Research using 9km downscaling found the jet present
-              on ~70% of summer days, with model underestimates of 7–14 km/h at the coast.
-              (Soares et al., 2014, Univ. Lisbon; IPCJ Climatology, DIVA-Portal 2014)
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-              Solara automatically applies a correction to reported wind speed based on
-              location, month, and hour — without any manual input required. Atlantic-facing
-              beaches (Praia de Mira, Costa da Caparica, Guincho, Nazaré, Ofir, etc.) receive
-              up to ×1.4 in summer afternoons. South-facing Algarve beaches, Madeira and
-              Açores receive no correction.
-            </p>
-          </div>
-
-          {/* Exposure estimate */}
+          {/* How the score is built */}
           <div>
-            <h3 className="font-semibold text-foreground mb-1">Exposure time estimate</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-              When you expand a day, Solara estimates minutes needed outdoors for a meaningful
-              vitamin D dose at the best qualifying hour. Based on Holick's Rule (NEJM 2007;
-              Am J Clin Nutr 2004): ~25% body surface exposed to 1/4 MED. Baseline: 15 min
-              at UV 3 for Fitzpatrick Type II. Multipliers from Tsiaras & Weinstock (2011)
-              and Nutrients (2024).
+            <h3 className="font-semibold text-foreground mb-1">How the score is built</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+              Four variables add up to a base score, then a wind multiplier scales the result down.
+              No single variable can make or break the score — they work together.
             </p>
-            <div className="flex flex-col gap-1.5">
-              {SKIN_TYPES.map(s => (
-                <div key={s.id} className="flex items-center gap-3">
-                  <span className="text-xs font-medium text-foreground w-16 shrink-0">{s.label}</span>
-                  <span className="text-xs text-muted-foreground flex-1">{s.description}</span>
-                  <span className="text-[10px] text-muted-foreground/60 shrink-0">×{s.multiplier}</span>
+            <div className="flex flex-col gap-3">
+              {[
+                {
+                  name: "Solar radiation", weight: "45 pts", icon: "⚡",
+                  detail: "Direct W/m² reaching the ground. The heaviest term — it physically encodes cloud conditions and sun angle. Above 500 W/m² a saturation curve applies, compressing the top end so peak summer doesn't dominate."
+                },
+                {
+                  name: "Cloud cover", weight: "15 pts", icon: "☁",
+                  detail: "Lower weight than radiation to avoid double-penalising overcast hours — radiation already drops when cloud thickens. The cloud term captures partial coverage that radiation alone misses."
+                },
+                {
+                  name: "UV index", weight: "15 pts", icon: "☀",
+                  detail: "UV 0–10 scored linearly. When Open-Meteo returns no UV (common for historical dates), Solara estimates it from radiation and solar zenith angle with a seasonal correction."
+                },
+                {
+                  name: "Feels-like temperature", weight: "25 pts", icon: "🌡",
+                  detail: "Apparent temperature 10–40°C scored linearly. Below 10°C contributes zero — not because sun is absent, but because meaningful skin exposure becomes impractical. A clear 15°C winter day still scores well on the other three terms."
+                },
+              ].map(v => (
+                <div key={v.name} className="flex items-start gap-3">
+                  <div className="w-8 text-center text-base shrink-0 mt-0.5">{v.icon}</div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-baseline gap-2 mb-0.5">
+                      <span className="text-xs font-semibold text-foreground">{v.name}</span>
+                      <span className="text-[10px] text-muted-foreground">max {v.weight}</span>
+                    </div>
+                    <p className="text-[10px] text-muted-foreground leading-relaxed">{v.detail}</p>
+                  </div>
                 </div>
               ))}
             </div>
-          </div>
 
-          {/* Skin type caveat */}
-          <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40 rounded-xl p-3 flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              <AlertCircle size={14} className="text-amber-600 dark:text-amber-400 shrink-0" />
-              <span className="text-xs font-semibold text-amber-800 dark:text-amber-300">Skin type matters</span>
+            {/* Wind multiplier */}
+            <div className="mt-4 bg-muted/40 rounded-xl p-3">
+              <div className="flex items-baseline gap-2 mb-2">
+                <span className="text-xs font-semibold text-foreground">🌬 Wind multiplier</span>
+                <span className="text-[10px] text-muted-foreground">scales the entire base score</span>
+              </div>
+              <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+                Wind doesn't block UV — but it determines whether you'll actually stay outside.
+                The multiplier is continuous, not stepped: penalties increase smoothly with speed.
+              </p>
+              <div className="flex flex-col gap-1">
+                {[
+                  { range: "≤ 15 km/h",  label: "No penalty",   mult: "×1.0", note: "Calm to gentle breeze. Beaufort 0–3." },
+                  { range: "15–30 km/h", label: "Mild penalty",  mult: "×1.0→0.7", note: "Moderate breeze. Noticeable but manageable." },
+                  { range: "30–50 km/h", label: "Strong penalty",mult: "×0.7→0.4", note: "Fresh to strong breeze. Extended stays unlikely." },
+                  { range: "> 50 km/h",  label: "Severe",        mult: "×0.3", note: "Near gale. Most people will not stay out." },
+                ].map(r => (
+                  <div key={r.range} className="flex items-center gap-2 text-[10px]">
+                    <span className="font-mono text-muted-foreground w-20 shrink-0">{r.range}</span>
+                    <span className="font-semibold text-foreground w-12 shrink-0">{r.mult}</span>
+                    <span className="text-muted-foreground">{r.note}</span>
+                  </div>
+                ))}
+              </div>
             </div>
-            <p className="text-xs text-amber-800/80 dark:text-amber-300/80 leading-relaxed">
-              Solara uses the same score for all users, but safe exposure time varies widely.
-              Fair skin (Fitzpatrick I–II) may reach MED in under 10 min at UV 8.
-              Darker skin (Fitzpatrick V–VI) requires up to 4× longer for the same vitamin D.
-              Use the skin type selector in the day view to personalise your estimate.
-              (Nutrients, 2024; Holick, NEJM 2007)
-            </p>
           </div>
 
-          {/* Medical disclaimer */}
+          {/* Corrections */}
+          <div>
+            <h3 className="font-semibold text-foreground mb-1">Automatic corrections</h3>
+            <p className="text-xs text-muted-foreground leading-relaxed mb-3">
+              Raw weather model data has known biases for specific locations and conditions.
+              Solara applies three corrections silently — no settings required.
+            </p>
+            <div className="flex flex-col gap-4">
+
+              <div>
+                <div className="text-xs font-semibold text-foreground mb-0.5">Nortada wind (IPCJ)</div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  ERA5 — the model behind Open-Meteo — runs at ~31 km resolution and systematically
+                  underestimates the Iberian Coastal Low-Level Jet (locally: the Nortada),
+                  a persistent summer northerly along Portugal's Atlantic coast.
+                  Research found the jet present on ~70% of summer days, with underestimates
+                  of 7–14 km/h at the coast. (Soares et al., 2014; IPCJ Climatology, DIVA-Portal 2014)
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
+                  Solara automatically identifies your location's exposure — west-facing Atlantic
+                  beaches receive up to ×1.4 on reported wind in summer afternoons.
+                  South-facing Algarve, Madeira, and Açores receive no correction.
+                  The corrected value is shown as <span className="text-orange-500 font-medium">IPCJ: xx km/h</span> in each hour row.
+                </p>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-foreground mb-0.5">Radiation saturation</div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Above 500 W/m², the subjective benefit of more direct sun plateaus — 600 vs 750 W/m²
+                  feels similar to a sun-lover. A linear model would over-reward peak August
+                  over a clear April afternoon. Above 500 W/m² Solara applies a square-root
+                  compression, so 800 W/m² maps to ~680 effective W/m².
+                </p>
+              </div>
+
+              <div>
+                <div className="text-xs font-semibold text-foreground mb-0.5">UV fallback estimate</div>
+                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                  Open-Meteo's forecast API sometimes returns null UV. When that happens, Solara
+                  estimates UV from direct radiation using a zenith-angle weight (peaks at solar noon)
+                  and a seasonal efficiency factor — summer ozone over Iberia is thinner,
+                  yielding more UV per W/m².
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Data source */}
           <div className="border-t border-border pt-4">
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              <strong className="text-foreground">Not medical advice.</strong> Scores are derived
-              from publicly available weather data and published UV/photobiology research.
-              If you take photosensitising medications (fluoroquinolone antibiotics, tetracyclines,
-              thiazide diuretics, certain antidepressants, or retinoids), or have a light-sensitive
-              condition (lupus, xeroderma pigmentosum, porphyria), consult your doctor before
-              increasing sun exposure.
+            <p className="text-[10px] text-muted-foreground leading-relaxed">
+              Weather data from <span className="text-foreground font-medium">Open-Meteo</span> (ERA5-backed forecast and archive APIs).
+              Location search via <span className="text-foreground font-medium">Nominatim / OpenStreetMap</span>.
+              Wind correction: Soares et al., 2014, Univ. Lisbon; DIVA-Portal IPCJ Climatology, 2014.
             </p>
           </div>
         </div>
@@ -1190,17 +1042,12 @@ function AccuracySection({
 export default function Home() {
   const [location, setLocation] = useState<{ lat: number; lon: number; name: string } | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [skinTypeId, setSkinTypeId] = useState(2);
   const [units, setUnits] = useState<UnitSystem>('metric');
   const [introDone, setIntroDone] = useState<boolean | null>(null);
   const [ipcjExposure, setIpcjExposure] = useState<IpcjExposure>('none');
   const qc = useQueryClient();
 
   // Load saved preferences on mount
-  const { data: skinPref } = useQuery<{ value: string | null }>({
-    queryKey: ['/api/prefs/skin_type'],
-    staleTime: Infinity,
-  });
   const { data: unitsPref } = useQuery<{ value: string | null }>({
     queryKey: ['/api/prefs/units'],
     staleTime: Infinity,
@@ -1210,9 +1057,6 @@ export default function Home() {
     staleTime: Infinity,
   });
   useEffect(() => {
-    if (skinPref?.value) setSkinTypeId(Number(skinPref.value));
-  }, [skinPref]);
-  useEffect(() => {
     if (unitsPref?.value === 'imperial') setUnits('imperial');
   }, [unitsPref]);
   useEffect(() => {
@@ -1220,11 +1064,6 @@ export default function Home() {
       setIntroDone(introPref?.value === '1');
     }
   }, [introPref]);
-
-  const saveSkinType = useCallback((id: number) => {
-    setSkinTypeId(id);
-    apiRequest('POST', '/api/prefs/skin_type', { value: String(id) });
-  }, []);
 
   const toggleUnits = useCallback(() => {
     const next: UnitSystem = units === 'metric' ? 'imperial' : 'metric';
