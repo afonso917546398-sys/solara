@@ -608,19 +608,64 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
               <div>
                 <div className="text-xs font-semibold text-foreground mb-0.5">Nortada wind (IPCJ)</div>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
-                  ERA5 — the model behind Open-Meteo — runs at ~31 km resolution and systematically
-                  underestimates the Iberian Coastal Low-Level Jet (locally: the Nortada),
-                  a persistent summer northerly along Portugal's Atlantic coast.
-                  Research found the jet present on ~70% of summer days, with underestimates
-                  of 7–14 km/h at the coast. (Soares et al., 2014; IPCJ Climatology, DIVA-Portal 2014)
+                <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+                  ERA5 — the model behind Open-Meteo — runs at ~31 km resolution and
+                  systematically underestimates the Iberian Coastal Low-Level Jet (the Nortada),
+                  a persistent northerly along Portugal's Atlantic coast present on ~70% of summer days,
+                  with model underestimates of 7–14 km/h at the coast.
+                  (Soares et al., 2014; DIVA-Portal 2014)
                 </p>
-                <p className="text-[10px] text-muted-foreground leading-relaxed mt-1">
-                  Solara automatically identifies your location's exposure — west-facing Atlantic
-                  beaches receive up to ×1.4 on reported wind in summer afternoons.
-                  South-facing Algarve, Madeira, and Açores receive no correction.
-                  The corrected value is shown as <span className="text-orange-500 font-medium">IPCJ: xx km/h</span> in each hour row.
+                <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+                  Solara classifies each location automatically and multiplies the reported wind
+                  before scoring. The corrected value appears as{' '}
+                  <span className="text-orange-500 font-medium">IPCJ: xx km/h</span> in each hour row
+                  and in the accuracy board.
                 </p>
+                {/* Location tiers */}
+                <div className="flex flex-col gap-1 mb-2">
+                  {[
+                    { tier: 'High exposure', color: 'bg-orange-500', desc: 'West-Atlantic-facing beaches directly in the jet path: Costa Vicentina, Nazaré, Figueira, Costa Nova, Praia de Mira, Costa da Caparica, Guincho, Ofir, Matosinhos.' },
+                    { tier: 'Medium exposure', color: 'bg-yellow-400', desc: 'Partially sheltered: Arrábida, Sesimbra, Tróia, southwest tip (Sagres area).' },
+                    { tier: 'No correction', color: 'bg-gray-300', desc: 'Algarve south coast, Madeira, Açores, inland locations.' },
+                  ].map(t => (
+                    <div key={t.tier} className="flex items-start gap-2">
+                      <span className={`w-2 h-2 rounded-full shrink-0 mt-1 ${t.color}`} />
+                      <div className="text-[10px] text-muted-foreground leading-relaxed">
+                        <span className="font-semibold text-foreground">{t.tier} — </span>{t.desc}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {/* Multiplier table */}
+                <div className="bg-muted/40 rounded-xl overflow-hidden">
+                  <table className="w-full text-[10px]">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left px-2 py-1.5 font-semibold text-foreground">Season</th>
+                        <th className="text-left px-2 py-1.5 font-semibold text-foreground">Hours</th>
+                        <th className="text-center px-2 py-1.5 font-semibold text-orange-600">High</th>
+                        <th className="text-center px-2 py-1.5 font-semibold text-yellow-600">Medium</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-muted-foreground">
+                      {[
+                        { season: 'Jun–Sep', hours: '13h–20h', high: '×1.40', med: '×1.25' },
+                        { season: 'Jun–Sep', hours: '07h–12h', high: '×1.15', med: '×1.10' },
+                        { season: 'Jun–Sep', hours: 'other',    high: '×1.10', med: '×1.05' },
+                        { season: 'Apr–May, Oct', hours: '13h–20h', high: '×1.20', med: '×1.12' },
+                        { season: 'Apr–May, Oct', hours: 'other',    high: '×1.10', med: '×1.05' },
+                        { season: 'Nov–Mar', hours: 'any',      high: '×1.05', med: '×1.02' },
+                      ].map((r, i) => (
+                        <tr key={i} className="border-b border-border/50 last:border-0">
+                          <td className="px-2 py-1">{r.season}</td>
+                          <td className="px-2 py-1 font-mono">{r.hours}</td>
+                          <td className="px-2 py-1 text-center font-semibold text-foreground">{r.high}</td>
+                          <td className="px-2 py-1 text-center font-semibold text-foreground">{r.med}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
 
               <div>
