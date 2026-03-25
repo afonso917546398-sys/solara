@@ -115,20 +115,20 @@ function HourRow({ h, units, ipcjExposure, dayMonth }: { h: HourData; units: Uni
     <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-muted/50">
       {/* Top row: time + bar + score */}
       <div className="flex items-center gap-3">
-        <div className="w-14 shrink-0">
-          <span className="font-mono text-xs text-muted-foreground">{h.timeLabel}</span>
+        <div className="w-9 shrink-0">
+          <span className="font-mono text-[10px] text-muted-foreground">{h.timeLabel}</span>
         </div>
         <div className="flex-1 h-3 bg-border rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all ${pct > 0 ? hourBarColor(pct) : ''}`}
             style={{ width: `${pct}%` }} />
         </div>
-        <span className={`text-base font-bold w-8 text-right shrink-0 ${scoreColor(h.sunScore)}`}>
+        <span className={`text-sm font-bold w-7 text-right shrink-0 ${scoreColor(h.sunScore)}`}>
           {h.isDay ? h.sunScore : '—'}
         </span>
       </div>
       {/* Raw variables row — only during daylight, ordered by score weight: radiation, cloud, UV, temp, wind */}
       {h.isDay && (
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-[60px] text-xs text-muted-foreground">
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-[48px] text-xs text-muted-foreground">
           <span className="flex items-center gap-0.5" title="Direct radiation (W/m²)">
             ⚡ {Math.round(h.directRadiation)} W/m²
           </span>
