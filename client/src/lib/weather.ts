@@ -68,15 +68,16 @@ export const THRESHOLDS = {
 };
 
 // ── Wind multiplier ──────────────────────────────────────────────────
-// Smooth continuous multiplier (not step-based).
-// ≤ 8 km/h  → 1.0   (calm, full score)
-// 8–15 km/h → 1.0→0.8 (gentle breeze, light penalty)
-// 15–25 km/h→ 0.8→0.5 (moderate wind, noticeable)
-// > 25 km/h → 0.3   (strong wind, heavy penalty)
+// Smooth continuous multiplier. Calibrated against real session data
+// (Praia de Mira 24 Mar 2026: pleasant at 11-14 km/h).
+// ≤ 15 km/h → 1.0   (gentle breeze or less, no penalty)
+// 15–30 km/h → 1.0→0.7 (moderate, noticeable but still enjoyable)
+// 30–50 km/h → 0.7→0.4 (strong, significantly reduces comfort)
+// > 50 km/h → 0.3   (near gale, most people leave)
 function windFactor(ws: number): number {
-  if (ws <= 8)  return 1.0;
-  if (ws <= 15) return 1.0 - 0.2 * (ws - 8) / (15 - 8);
-  if (ws <= 25) return 0.8 - 0.3 * (ws - 15) / (25 - 15);
+  if (ws <= 15) return 1.0;
+  if (ws <= 30) return 1.0 - 0.3 * (ws - 15) / (30 - 15);
+  if (ws <= 50) return 0.7 - 0.3 * (ws - 30) / (50 - 30);
   return 0.3;
 }
 
@@ -99,13 +100,15 @@ export function calcHourScore(h: Omit<HourData, 'sunScore'>): number {
     ((h.apparentTemp - 10) / (40 - 10)) * 25
   ));
 
-  // ── 2. sun_term: directRadiation 0–800 W/m² → 0–35 pts ─────────
-  // Linear. 0 W/m² = no sun, 800 W/m² = peak summer Iberia noon.
-  const sunTerm = Math.min(35, (h.directRadiation / 800) * 35);
+  // ── 2. sun_term: directRadiation 0–800 W/m² → 0–45 pts ─────────
+  // Raised from 35→45 pts. Radiation already encodes cloud conditions
+  // physically (cloud blocks radiation), so it should carry more weight.
+  const sunTerm = Math.min(45, (h.directRadiation / 800) * 45);
 
-  // ── 3. cloud_term: cloudCover 0–100% → 0–25 pts ──────────────
-  // Inverted linear. Clear sky (0%) = 25 pts. Full overcast (100%) = 0 pts.
-  const cloudTerm = ((100 - h.cloudCover) / 100) * 25;
+  // ── 3. cloud_term: cloudCover 0–100% → 0–15 pts ──────────────
+  // Reduced from 25→15 pts to avoid double-penalising cloud alongside
+  // radiation (which already captures the physical effect of cloud cover).
+  const cloudTerm = ((100 - h.cloudCover) / 100) * 15;
 
   // ── 4. uv_term: uvIndex 0–10 → 0–15 pts ────────────────────
   // Capped at UV 10 (extreme). Higher = more sun-lover appeal.

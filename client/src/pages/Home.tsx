@@ -593,10 +593,10 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
               <div className="font-semibold text-foreground mb-1">Term weights (max base = 100)</div>
               <div className="flex flex-col gap-0.5">
                 <div><span className="font-medium text-foreground">Temperature</span> — apparentTemp 10–40°C → 0–25 pts. Linear.</div>
-                <div><span className="font-medium text-foreground">Solar radiation</span> — directRadiation 0–800 W/m² → 0–35 pts. Linear.</div>
-                <div><span className="font-medium text-foreground">Cloud cover</span> — cloudCover 0–100% → 25–0 pts. Inverted linear.</div>
+                <div><span className="font-medium text-foreground">Solar radiation</span> — directRadiation 0–800 W/m² → 0–45 pts. Linear. Carries more weight as it physically encodes cloud conditions.</div>
+                <div><span className="font-medium text-foreground">Cloud cover</span> — cloudCover 0–100% → 15–0 pts. Inverted linear (reduced weight to avoid double-penalising with radiation).</div>
                 <div><span className="font-medium text-foreground">UV index</span> — uvIndex 0–10 → 0–15 pts. Linear.</div>
-                <div className="mt-1"><span className="font-medium text-foreground">Wind multiplier</span> — ≤8 km/h: ×1.0 · 8–15: ×1.0→0.8 · 15–25: ×0.8→0.5 · &gt;25: ×0.3</div>
+                <div className="mt-1"><span className="font-medium text-foreground">Wind multiplier</span> — ≤15 km/h: ×1.0 · 15–30: ×1.0→0.7 · 30–50: ×0.7→0.4 · &gt;50: ×0.3</div>
               </div>
             </div>
           </div>
