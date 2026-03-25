@@ -16,6 +16,7 @@ import {
   type GeoResult,
 } from "@/lib/weather";
 import { defaultIpcjExposure, type IpcjExposure } from "@/lib/ipcj";
+import { ipcjWindFactor } from "@/lib/corrections";
 import {
   calcExposureMinutes,
   bestExposureHour,
@@ -112,7 +113,7 @@ function ScoreDot({ score, size = 44 }: { score: number; size?: number }) {
 
 
 // ── Hour Row ──────────────────────────────────────────────────────
-function HourRow({ h, isPeak, units }: { h: HourData; isPeak: boolean; units: UnitSystem }) {
+function HourRow({ h, isPeak, units, ipcjExposure, dayMonth }: { h: HourData; isPeak: boolean; units: UnitSystem; ipcjExposure: IpcjExposure; dayMonth: number }) {
   const pct = h.isDay ? h.sunScore : 0;
   return (
     <div className={`flex flex-col gap-1.5 px-3 py-2.5 rounded-lg text-sm transition-colors
@@ -175,7 +176,12 @@ function HourRow({ h, isPeak, units }: { h: HourData; isPeak: boolean; units: Un
               : h.windSpeed >= 29 ? 'text-yellow-600 dark:text-yellow-500 font-medium'
               : 'text-muted-foreground'
             }`}>
-            <Wind size={11} />{fmtWind(h.windSpeed, units)}
+            <Wind size={11} />{fmtWind(h.windSpeed, units)}{(() => {
+              const factor = ipcjWindFactor(ipcjExposure, dayMonth, h.hour);
+              if (factor <= 1.0) return null;
+              const corrected = Math.round(h.windSpeed * factor);
+              return <span className="ml-1 text-[10px] text-orange-500 dark:text-orange-400 font-medium">IPCJ: {fmtWind(corrected, units)}</span>;
+            })()}
           </span>
           <span className="text-muted-foreground/50">({fmtTemp(h.temperature, units)} actual)</span>
         </div>
@@ -226,12 +232,13 @@ function ExposureWidget({ day, skinTypeId, onChangeSkin, units }: {
 }
 
 // ── Day Card ──────────────────────────────────────────────────────
-function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
+function DayCard({ day, locationName, skinTypeId, onChangeSkin, units, ipcjExposure }: {
   day: DayData;
   locationName?: string;
   skinTypeId: number;
   onChangeSkin: (id: number) => void;
   units: UnitSystem;
+  ipcjExposure: IpcjExposure;
 }) {
   const [expanded, setExpanded] = useState(false);
   const bg = scoreBg(day.dayScore);
@@ -272,7 +279,8 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
           <div className="flex flex-col gap-0.5">
             {dayHours.map(h => {
               const isPeak = !!(peak && h.hour >= peak.startHour && h.hour < peak.endHour);
-              return <HourRow key={h.hour} h={h} isPeak={isPeak} units={units} />;
+              const dayMonth = new Date(day.date).getMonth() + 1;
+              return <HourRow key={h.hour} h={h} isPeak={isPeak} units={units} ipcjExposure={ipcjExposure} dayMonth={dayMonth} />;
             })}
           </div>
 
@@ -1413,6 +1421,7 @@ export default function Home() {
                   skinTypeId={skinTypeId}
                   onChangeSkin={saveSkinType}
                   units={units}
+                  ipcjExposure={ipcjExposure}
                 />
               ))}
             </div>
