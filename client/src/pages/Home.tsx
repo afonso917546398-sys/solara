@@ -1009,7 +1009,7 @@ export default function Home() {
               title="About the score"
             >
               <Info size={14} />
-              <span className="hidden sm:inline">Sun-Lover Index</span>
+              <span className="hidden sm:inline">Solara Index</span>
             </button>
             <button
               data-testid="btn-change-location"
