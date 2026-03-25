@@ -58,10 +58,10 @@ function DayBars({ hours, sunrise, sunset }: {
           const barH = Math.max(3, Math.round((h.sunScore / 100) * maxH));
           // Consistent palette: matches scoreColor labels and hourBarColor
           let bg = "#d1d5db";       // gray-300 — below threshold / no sun
-          if (h.sunScore >= 80)      bg = "#ea580c"; // orange-600 — Golden hour
+          if (h.sunScore >= 80)      bg = "#ea580c"; // orange-600 — Prime sun
           else if (h.sunScore >= 65) bg = "#eab308"; // yellow-500 — Good sun
-          else if (h.sunScore >= 45) bg = "#fef08a"; // yellow-200 — Partial sun
-          const showLabel = h.sunScore >= 65;
+          else if (h.sunScore >= 45) bg = "#fef08a"; // yellow-200 — Fair sun
+          const showLabel = h.sunScore >= 45;
           return (
             <div key={h.hour} className="flex-1 rounded-sm relative"
               style={{ height: barH, backgroundColor: bg }}>
@@ -113,20 +113,14 @@ function ScoreDot({ score, size = 44 }: { score: number; size?: number }) {
 
 
 // ── Hour Row ──────────────────────────────────────────────────────
-function HourRow({ h, isPeak, units, ipcjExposure, dayMonth }: { h: HourData; isPeak: boolean; units: UnitSystem; ipcjExposure: IpcjExposure; dayMonth: number }) {
+function HourRow({ h, units, ipcjExposure, dayMonth }: { h: HourData; units: UnitSystem; ipcjExposure: IpcjExposure; dayMonth: number }) {
   const pct = h.isDay ? h.sunScore : 0;
   return (
-    <div className={`flex flex-col gap-1.5 px-3 py-2.5 rounded-lg text-sm transition-colors
-      ${isPeak ? 'bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-700/40' : 'hover:bg-muted/50'}`}>
+    <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-muted/50">
       {/* Top row: time + bar + score */}
       <div className="flex items-center gap-3">
-        <div className="w-14 shrink-0 flex flex-col">
-          <span className={`font-mono text-xs ${isPeak ? 'font-bold text-amber-700 dark:text-amber-400' : 'text-muted-foreground'}`}>
-            {h.timeLabel}
-          </span>
-          {isPeak && (
-            <span className="text-[10px] font-semibold text-amber-600 dark:text-amber-400 leading-none mt-0.5">Peak</span>
-          )}
+        <div className="w-14 shrink-0">
+          <span className="font-mono text-xs text-muted-foreground">{h.timeLabel}</span>
         </div>
         <div className="flex-1 h-3 bg-border rounded-full overflow-hidden">
           <div className={`h-full rounded-full transition-all ${pct > 0 ? hourBarColor(pct) : ''}`}
@@ -136,46 +130,22 @@ function HourRow({ h, isPeak, units, ipcjExposure, dayMonth }: { h: HourData; is
           {h.isDay ? h.sunScore : '—'}
         </span>
       </div>
-      {/* Raw variables row — only during daylight */}
+      {/* Raw variables row — only during daylight, ordered by score weight: radiation, cloud, UV, temp, wind */}
       {h.isDay && (
-        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-[60px] text-xs">
-          {/* Each value coloured red if below its threshold */}
-          <span
-            title={`Cloud cover — max ${THRESHOLDS.cloudMax}% to qualify`}
-            className={`flex items-center gap-0.5 ${
-              h.cloudCover > THRESHOLDS.cloudMax ? 'text-red-500 dark:text-red-400 font-medium' : 'text-muted-foreground'
-            }`}>
-            <Cloud size={11} />{h.cloudCover}%
-          </span>
-          <span
-            title={`UV Index — min ${THRESHOLDS.uvMin} to qualify`}
-            className={`flex items-center gap-0.5 ${
-              h.uvIndex < THRESHOLDS.uvMin ? 'text-red-500 dark:text-red-400 font-medium' : 'text-muted-foreground'
-            }`}>
-            <Sun size={11} />UV {h.uvIndex.toFixed(1)}
-          </span>
-          <span
-            title={`Direct radiation — min ${THRESHOLDS.radMin} W/m² to qualify`}
-            className={`flex items-center gap-0.5 ${
-              h.directRadiation < THRESHOLDS.radMin ? 'text-red-500 dark:text-red-400 font-medium' : 'text-muted-foreground'
-            }`}>
+        <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-[60px] text-xs text-muted-foreground">
+          <span className="flex items-center gap-0.5" title="Direct radiation (W/m²)">
             ⚡ {Math.round(h.directRadiation)} W/m²
           </span>
-          <span
-            title={`Feels-like — min ${fmtTemp(THRESHOLDS.tempMin, units)} to qualify`}
-            className={`flex items-center gap-0.5 ${
-              h.apparentTemp < THRESHOLDS.tempMin ? 'text-red-500 dark:text-red-400 font-medium' : 'text-muted-foreground'
-            }`}>
+          <span className="flex items-center gap-0.5" title="Cloud cover">
+            <Cloud size={11} />{h.cloudCover}%
+          </span>
+          <span className="flex items-center gap-0.5" title="UV Index">
+            <Sun size={11} />UV {h.uvIndex.toFixed(1)}
+          </span>
+          <span className="flex items-center gap-0.5" title="Feels-like temperature">
             <Thermometer size={11} />{fmtTemp(h.apparentTemp, units)} feels-like
           </span>
-          <span
-            title={`Wind — Beaufort 5 (${fmtWind(29, units)}) starts penalising score`}
-            className={`flex items-center gap-0.5 ${
-              h.windSpeed >= 50 ? 'text-red-500 dark:text-red-400 font-medium'
-              : h.windSpeed >= 39 ? 'text-orange-500 dark:text-orange-400 font-medium'
-              : h.windSpeed >= 29 ? 'text-yellow-600 dark:text-yellow-500 font-medium'
-              : 'text-muted-foreground'
-            }`}>
+          <span className="flex items-center gap-0.5" title="Wind speed">
             <Wind size={11} />{fmtWind(h.windSpeed, units)}{(() => {
               const factor = ipcjWindFactor(ipcjExposure, dayMonth, h.hour);
               if (factor <= 1.0) return null;
@@ -232,18 +202,15 @@ function ExposureWidget({ day, skinTypeId, onChangeSkin, units }: {
 }
 
 // ── Day Card ──────────────────────────────────────────────────────
-function DayCard({ day, locationName, skinTypeId, onChangeSkin, units, ipcjExposure }: {
+function DayCard({ day, locationName, units, ipcjExposure }: {
   day: DayData;
   locationName?: string;
-  skinTypeId: number;
-  onChangeSkin: (id: number) => void;
   units: UnitSystem;
   ipcjExposure: IpcjExposure;
 }) {
   const [expanded, setExpanded] = useState(false);
   const bg = scoreBg(day.dayScore);
   const dayHours = day.hours.filter(h => h.isDay);
-  const peak = day.peakWindow;
 
   return (
     <div className="border border-border rounded-2xl overflow-hidden transition-all bg-card">
@@ -278,33 +245,12 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units, ipcjExpos
           {/* Hourly list — only daylight hours */}
           <div className="flex flex-col gap-0.5">
             {dayHours.map(h => {
-              const isPeak = !!(peak && h.hour >= peak.startHour && h.hour < peak.endHour);
               const dayMonth = new Date(day.date).getMonth() + 1;
-              return <HourRow key={h.hour} h={h} isPeak={isPeak} units={units} ipcjExposure={ipcjExposure} dayMonth={dayMonth} />;
+              return <HourRow key={h.hour} h={h} units={units} ipcjExposure={ipcjExposure} dayMonth={dayMonth} />;
             })}
           </div>
 
-          {/* IPCJ correction note */}
-          <div className="bg-muted/40 rounded-xl p-3 flex flex-col gap-1">
-            <span className="text-xs font-semibold text-foreground">Nortada wind correction</span>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              The Iberian Peninsula Coastal Low-Level Jet (IPCJ) — the summer northerly wind
-              known as the Nortada — is systematically underestimated by weather models (ERA5/Open-Meteo)
-              at west-facing Atlantic beaches. Research using 9km downscaling found the jet present
-              on ~70% of summer days, with model underestimates of 7–14 km/h at the coast.
-              (Soares et al., 2014, Univ. Lisbon; IPCJ Climatology, DIVA-Portal 2014)
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
-              Solara automatically applies a correction to reported wind speed based on
-              location, month, and hour — without any manual input required. Atlantic-facing
-              beaches (Praia de Mira, Costa da Caparica, Guincho, Nazaré, Ofir, etc.) receive
-              up to ×1.4 in summer afternoons. South-facing Algarve beaches, Madeira and
-              Açores receive no correction.
-            </p>
-          </div>
 
-          {/* Exposure estimate */}
-          <ExposureWidget day={day} skinTypeId={skinTypeId} onChangeSkin={onChangeSkin} units={units} />
 
           {/* Verification prompt — today only, after peak window */}
           {locationName && (
@@ -634,9 +580,9 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
             <h3 className="font-semibold text-foreground mb-2">Score labels</h3>
             <div className="flex flex-col gap-2">
               {[
-                { label: "Golden hour", range: "80–100", color: "bg-orange-600", desc: "Strong UV, clear sky, warm. Maximum benefit per minute outdoors." },
+                { label: "Prime sun",  range: "80–100", color: "bg-orange-600", desc: "Strong UV, clear sky, warm. Maximum benefit per minute outdoors." },
                 { label: "Good sun",    range: "65–79",  color: "bg-yellow-500", desc: "All thresholds met. Minor cloud or lower radiation — still worthwhile." },
-                { label: "Partial sun", range: "45–64",  color: "bg-yellow-200 border border-yellow-300", desc: "Qualifying but suboptimal. Longer sessions needed." },
+                { label: "Fair sun",   range: "45–64",  color: "bg-yellow-200 border border-yellow-300", desc: "Qualifying but suboptimal. Longer sessions needed." },
                 { label: "Weak sun",    range: "25–44",  color: "bg-gray-300",   desc: "One or more variables barely above threshold. Very extended time required." },
                 { label: "No sun",      range: "0–24",   color: "bg-gray-200",   desc: "Below qualification thresholds. UV or radiation insufficient." },
               ].map(s => (
@@ -1418,8 +1364,6 @@ export default function Home() {
                   key={day.date}
                   day={day}
                   locationName={location.name}
-                  skinTypeId={skinTypeId}
-                  onChangeSkin={saveSkinType}
                   units={units}
                   ipcjExposure={ipcjExposure}
                 />

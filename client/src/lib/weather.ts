@@ -133,9 +133,9 @@ function calcDayScore(hours: HourData[]): number {
 }
 
 export function scoreLabel(score: number): string {
-  if (score >= 80) return "Golden hour";
+  if (score >= 80) return "Prime sun";
   if (score >= 65) return "Good sun";
-  if (score >= 45) return "Partial sun";
+  if (score >= 45) return "Fair sun";
   if (score >= 25) return "Weak sun";
   return "No sun";
 }
