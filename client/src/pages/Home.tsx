@@ -259,15 +259,12 @@ function IntroScreen({ onDone }: { onDone: () => void }) {
       <div className="flex flex-col gap-6 max-w-sm w-full">
         <div className="flex flex-col gap-3">
           <h1 className="text-2xl font-bold text-foreground leading-tight">
-            For people who feel better in the sun.
+            Dialing in on sunny times.
           </h1>
-          <p className="text-base text-muted-foreground leading-relaxed">
-            Solara scores every hour of daylight based on UV, radiation,
-            cloud cover, temperature and wind — so you always know the best
-            moment to step outside.
-          </p>
-          <p className="text-base text-muted-foreground leading-relaxed">
-            Open it in the morning. Go out when the bars glow orange.
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            This app was designed for Superman. He absorbs sun radiation and uses it
+            for his daily hero activities. All others using it should exercise caution
+            and heed health authorities' recommendations on sun exposure.
           </p>
         </div>
 
@@ -280,17 +277,9 @@ function IntroScreen({ onDone }: { onDone: () => void }) {
         >
           Get started
         </button>
-
-        <p className="text-xs text-muted-foreground text-center">
-          No account. No tracking. Just weather data and science.
-        </p>
       </div>
 
-      {/* Bottom: disclaimer */}
-      <p className="text-xs text-muted-foreground/60 text-center max-w-xs">
-        Sun scores are based on weather data. Everyone's skin and health needs are different —
-        use your own judgement and consult a doctor if you have light-sensitive conditions.
-      </p>
+      <div />
     </div>
   );
 }
