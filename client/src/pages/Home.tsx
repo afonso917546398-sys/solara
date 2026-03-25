@@ -285,7 +285,7 @@ function IntroScreen({ onDone }: { onDone: () => void }) {
 }
 
 // ── Location Gate ─────────────────────────────────────────────────
-function LocationGate({ onLocation }: { onLocation: (lat: number, lon: number, name: string) => void }) {
+function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: number, name: string) => void; onAbout: () => void }) {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeoResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -348,9 +348,21 @@ function LocationGate({ onLocation }: { onLocation: (lat: number, lon: number, n
             Dialing in on sunny times.
           </p>
           <p className="text-xs text-muted-foreground/70 mt-2 leading-relaxed max-w-xs mx-auto">
-            This app was designed for Superman. He absorbs sun radiation and uses it for his daily hero activities. All others using it should exercise caution and heed health authorities’ recommendations on sun exposure.
+            This app was designed for Superman. He absorbs sun radiation and uses it for his daily hero activities.
+          </p>
+          <p className="text-xs text-muted-foreground/70 mt-1 leading-relaxed max-w-xs mx-auto">
+            All others using it should exercise caution and heed health authorities’ recommendations on sun exposure.
           </p>
         </div>
+
+        {/* About score link */}
+        <button
+          onClick={onAbout}
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <Info size={13} />
+          About the score
+        </button>
 
         {/* City search — primary */}
         <div className="w-full flex flex-col gap-2">
@@ -952,7 +964,12 @@ export default function Home() {
   }
 
   if (!location) {
-    return <LocationGate onLocation={(lat, lon, name) => setLocation({ lat, lon, name })} />;
+    return (
+      <>
+        {aboutOpen && <AboutPanel onClose={() => setAboutOpen(false)} />}
+        <LocationGate onLocation={(lat, lon, name) => setLocation({ lat, lon, name })} onAbout={() => setAboutOpen(true)} />
+      </>
+    );
   }
 
   return (
