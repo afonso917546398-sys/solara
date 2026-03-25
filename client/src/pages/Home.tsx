@@ -146,7 +146,7 @@ function HourRow({ h, units, ipcjExposure, dayMonth }: { h: HourData; units: Uni
               const factor = ipcjWindFactor(ipcjExposure, dayMonth, h.hour);
               if (factor <= 1.0) return null;
               const corrected = Math.round(h.windSpeed * factor);
-              return <span className="ml-1 text-[10px] text-orange-500 dark:text-orange-400 font-medium">IPCJ: {fmtWind(corrected, units)}</span>;
+              return <span className="ml-1 text-[10px] text-muted-foreground">IPCJ: {fmtWind(corrected, units)}</span>;
             })()}
           </span>
           <span className="text-muted-foreground/50">({fmtTemp(h.temperature, units)} actual)</span>

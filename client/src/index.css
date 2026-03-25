@@ -89,62 +89,66 @@
   --destructive-border: hsl(from hsl(var(--destructive)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
 }
 
-/* DARK MODE — deep warm night */
+/* DARK MODE — Scorched: near-black warm base, amber-tinted borders */
 .dark {
-  --button-outline: rgba(255,255,255, .10);
-  --badge-outline: rgba(255,255,255, .05);
+  --button-outline: rgba(255,255,255, .08);
+  --badge-outline: rgba(255,255,255, .04);
   --opaque-button-border-intensity: 9;
-  --elevate-1: rgba(255,255,255, .04);
-  --elevate-2: rgba(255,255,255, .09);
+  --elevate-1: rgba(255,255,255, .03);
+  --elevate-2: rgba(255,255,255, .07);
 
-  --background: 28 18% 8%;
-  --foreground: 36 20% 90%;
+  /* #0e0c0a = near-black with warm brown tint */
+  --background: 28 18% 5%;
+  --foreground: 32 18% 88%;
 
-  --card: 28 16% 10%;
-  --card-foreground: 36 20% 90%;
-  --card-border: 30 14% 17%;
+  /* #181410 cards — barely lighter than bg */
+  --card: 28 16% 7%;
+  --card-foreground: 32 18% 88%;
+  --card-border: 30 16% 12%;
 
-  --border: 30 14% 17%;
-  --input: 30 14% 28%;
-  --ring: 38 85% 58%;
+  /* Amber-tinted borders — the subtle glow */
+  --border: 32 16% 11%;
+  --input: 30 14% 22%;
+  --ring: 24 90% 53%;
 
-  --primary: 38 85% 58%;
-  --primary-foreground: 28 18% 8%;
+  /* Primary — ember orange #e8650a */
+  --primary: 24 90% 53%;
+  --primary-foreground: 28 18% 5%;
 
-  --secondary: 28 14% 16%;
-  --secondary-foreground: 36 20% 90%;
+  --secondary: 28 12% 12%;
+  --secondary-foreground: 32 18% 88%;
 
-  --muted: 28 14% 13%;
-  --muted-foreground: 30 12% 55%;
+  --muted: 28 12% 10%;
+  --muted-foreground: 30 10% 48%;
 
-  --accent: 38 30% 18%;
-  --accent-foreground: 38 85% 70%;
+  --accent: 30 20% 13%;
+  --accent-foreground: 28 85% 65%;
 
   --destructive: 0 72% 55%;
   --destructive-foreground: 0 0% 98%;
 
-  --popover: 28 16% 11%;
-  --popover-foreground: 36 20% 90%;
-  --popover-border: 30 14% 17%;
+  --popover: 28 16% 8%;
+  --popover-foreground: 32 18% 88%;
+  --popover-border: 30 16% 12%;
 
-  --sidebar: 28 16% 9%;
-  --sidebar-foreground: 36 20% 90%;
-  --sidebar-border: 30 14% 15%;
-  --sidebar-primary: 38 85% 58%;
-  --sidebar-primary-foreground: 28 18% 8%;
-  --sidebar-accent: 28 14% 14%;
-  --sidebar-accent-foreground: 36 20% 90%;
-  --sidebar-ring: 38 85% 58%;
+  --sidebar: 28 16% 6%;
+  --sidebar-foreground: 32 18% 88%;
+  --sidebar-border: 30 16% 11%;
+  --sidebar-primary: 24 90% 53%;
+  --sidebar-primary-foreground: 28 18% 5%;
+  --sidebar-accent: 28 12% 11%;
+  --sidebar-accent-foreground: 32 18% 88%;
+  --sidebar-ring: 24 90% 53%;
 
-  --chart-1: 38 85% 58%;
-  --chart-2: 28 80% 62%;
+  --chart-1: 24 90% 53%;
+  --chart-2: 38 88% 55%;
   --chart-3: 200 70% 55%;
   --chart-4: 103 45% 52%;
   --chart-5: 280 55% 62%;
 
-  --shadow-sm: 0 1px 3px hsl(28 20% 3% / 0.3);
-  --shadow-md: 0 4px 16px hsl(28 20% 3% / 0.4);
-  --shadow-lg: 0 8px 32px hsl(28 20% 3% / 0.5);
+  --shadow-sm: 0 1px 3px hsl(28 20% 2% / 0.5);
+  --shadow-md: 0 4px 16px hsl(28 20% 2% / 0.6);
+  --shadow-lg: 0 8px 32px hsl(28 20% 2% / 0.7);
 
   --sidebar-primary-border: hsl(var(--sidebar-primary));
   --sidebar-primary-border: hsl(from hsl(var(--sidebar-primary)) h s calc(l + var(--opaque-button-border-intensity)) / alpha);
