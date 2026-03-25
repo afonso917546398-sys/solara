@@ -15,6 +15,7 @@ import {
   type SunForecast,
   type GeoResult,
 } from "@/lib/weather";
+import { defaultIpcjExposure, type IpcjExposure } from "@/lib/ipcj";
 import {
   calcExposureMinutes,
   bestExposureHour,
@@ -1199,7 +1200,9 @@ export default function Home() {
   const [aboutOpen, setAboutOpen] = useState(false);
   const [skinTypeId, setSkinTypeId] = useState(2);
   const [units, setUnits] = useState<UnitSystem>('metric');
-  const [introDone, setIntroDone] = useState<boolean | null>(null); // null = loading
+  const [introDone, setIntroDone] = useState<boolean | null>(null);
+  const [ipcjExposure, setIpcjExposure] = useState<IpcjExposure>('none');
+  const [ipcjOverridden, setIpcjOverridden] = useState(false); // user manually toggled
   const qc = useQueryClient();
 
   // Load saved preferences on mount
@@ -1238,9 +1241,25 @@ export default function Home() {
     apiRequest('POST', '/api/prefs/units', { value: next });
   }, [units]);
 
+  // Auto-classify IPCJ exposure when location changes (unless user overrode)
+  useEffect(() => {
+    if (location && !ipcjOverridden) {
+      setIpcjExposure(defaultIpcjExposure(location.lat, location.lon));
+    }
+  }, [location?.lat, location?.lon]);
+
+  const toggleIpcj = useCallback(() => {
+    setIpcjOverridden(true);
+    setIpcjExposure(prev =>
+      prev === 'none' ? 'high'
+      : prev === 'high' ? 'medium'
+      : 'none'
+    );
+  }, []);
+
   const { data, isLoading, isError, refetch } = useQuery<SunForecast>({
-    queryKey: ['sun', location?.lat, location?.lon],
-    queryFn: () => fetchSunForecast(location!.lat, location!.lon, location!.name),
+    queryKey: ['sun', location?.lat, location?.lon, ipcjExposure],
+    queryFn: () => fetchSunForecast(location!.lat, location!.lon, location!.name, ipcjExposure),
     enabled: !!location,
     staleTime: 1000 * 60 * 30,
     retry: 1,
@@ -1296,6 +1315,19 @@ export default function Home() {
             <span className="font-bold text-base">Solara</span>
           </div>
           <div className="flex items-center gap-3">
+            {/* IPCJ wind correction toggle */}
+            <button
+              data-testid="btn-toggle-ipcj"
+              onClick={toggleIpcj}
+              title={`Nortada wind correction: ${ipcjExposure}. Tap to cycle: none → high → medium`}
+              className={`text-xs font-medium transition-colors px-2 py-1 rounded-lg hover:bg-accent
+                ${ ipcjExposure !== 'none'
+                  ? 'text-amber-600 dark:text-amber-400'
+                  : 'text-muted-foreground hover:text-foreground'
+                }`}
+            >
+              {ipcjExposure === 'none'   ? '🌬️' : ipcjExposure === 'high' ? '🌬️↑↑' : '🌬️↑'}
+            </button>
             <button
               data-testid="btn-toggle-units"
               onClick={toggleUnits}

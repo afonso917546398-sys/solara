@@ -193,10 +193,13 @@ function parseTime(iso: string): string {
   return t.slice(0, 5);
 }
 
+import { ipcjWindFactor, estimateUV, effectiveRadiation } from './corrections';
+
 export async function fetchSunForecast(
   lat: number,
   lon: number,
-  locationName: string
+  locationName: string,
+  ipcjExposure: import('./corrections').IpcjExposure = 'none'
 ): Promise<SunForecast> {
   const url = new URL('https://api.open-meteo.com/v1/forecast');
   url.searchParams.set('latitude', lat.toString());
@@ -227,15 +230,32 @@ export async function fetchSunForecast(
   times.forEach((t, i) => {
     const date = t.split('T')[0];
     const hour = parseInt(t.split('T')[1].slice(0, 2), 10);
+    const month = parseInt(date.split('-')[1], 10);
+
+    // ── Correction 1: IPCJ wind adjustment ───────────────────────
+    // Multiply reported wind by IPCJ factor for affected coastal locations.
+    const rawWind = hourly.wind_speed_10m[i];
+    const correctedWind = Math.round(rawWind * ipcjWindFactor(ipcjExposure, month, hour));
+
+    // ── Correction 2: UV fallback when archive returns null ───────
+    const rawUV = hourly.uv_index[i];
+    const uvIndex = (rawUV !== null && rawUV !== undefined)
+      ? rawUV
+      : estimateUV(hourly.direct_radiation[i], hour, month);
+
+    // ── Correction 3: radiation saturation above 500 W/m² ────────
+    const rawRad = hourly.direct_radiation[i];
+    const effectRad = effectiveRadiation(rawRad);
+
     const hBase = {
       hour,
       timeLabel: `${String(hour).padStart(2, '0')}:00`,
       cloudCover: hourly.cloud_cover[i],
-      uvIndex: hourly.uv_index[i],
+      uvIndex,
       temperature: Math.round(hourly.temperature_2m[i] * 10) / 10,
       apparentTemp: Math.round(hourly.apparent_temperature[i] * 10) / 10,
-      directRadiation: hourly.direct_radiation[i],
-      windSpeed: Math.round(hourly.wind_speed_10m[i]),
+      directRadiation: effectRad,       // saturation-corrected
+      windSpeed: correctedWind,          // IPCJ-corrected
       isDay: hourly.is_day[i],
       weatherCode: hourly.weather_code[i],
     };
