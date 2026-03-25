@@ -493,7 +493,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border">
-          <h2 className="text-base font-bold text-foreground">Afonso Sun-Lover Index</h2>
+          <h2 className="text-base font-bold text-foreground">Solara Index</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X size={18} />
           </button>

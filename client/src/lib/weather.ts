@@ -46,7 +46,7 @@ function wmoSunPenalty(code: number): number {
   return -10;
 }
 
-// ── Afonso Sun-Lover Index ───────────────────────────────────────────
+// ── Solara Index ───────────────────────────────────────────
 // A personal preference index: higher scores = hotter, sunnier, higher UV,
 // lower wind. Not a health-safety recommendation.
 //

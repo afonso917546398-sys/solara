@@ -1,6 +1,6 @@
 // ── Solara — Environmental Corrections ───────────────────────────
 // Science-based adjustments applied on top of raw Open-Meteo data
-// before the Afonso Sun-Lover Index is computed.
+// before the Solara Index is computed.
 
 // ─────────────────────────────────────────────────────────────────
 // 1. IPCJ COASTAL WIND CORRECTION
