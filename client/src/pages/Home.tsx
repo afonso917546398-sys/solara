@@ -724,7 +724,7 @@ function FavouritesBar({
 }
 
 // ── Accuracy Section ──────────────────────────────────────────────
-function AccuracySection({ lat, lon, units }: { lat: number; lon: number; units: UnitSystem }) {
+function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: number; units: UnitSystem; ipcjExposure: IpcjExposure }) {
   const [open, setOpen] = useState(false);
 
   const { data: rows, isLoading, isError } = useQuery<DayAccuracy[]>({
@@ -794,24 +794,47 @@ function AccuracySection({ lat, lon, units }: { lat: number; lon: number; units:
                       </div>
                     </div>
                     {/* Variable comparison grid */}
-                    <div className="grid grid-cols-5 text-[10px]">
-                      {[
-                        { label: '⚡ Rad', f: `${h.fRad}`, a: `${h.aRad}`, d: delta(h.aRad, h.fRad) },
-                        { label: '☁ Cloud', f: `${h.fCloud}%`, a: `${h.aCloud}%`, d: delta(h.aCloud, h.fCloud, true) },
-                        { label: '☀ UV', f: `${h.fUV}`, a: `${h.aUV}`, d: delta(h.aUV, h.fUV) },
+                    {(() => {
+                      const month = new Date(row.date).getMonth() + 1;
+                      const ipcjFactor = ipcjWindFactor(ipcjExposure, month, h.hour);
+                      const fWindIpcj = Math.round(h.fWind * ipcjFactor);
+                      const hasIpcj = ipcjFactor > 1.0;
+                      const cols = [
+                        { label: '⚡ Rad',   f: `${h.fRad}`,            a: `${h.aRad}`,            d: delta(h.aRad, h.fRad) },
+                        { label: '☁ Cloud', f: `${h.fCloud}%`,          a: `${h.aCloud}%`,          d: delta(h.aCloud, h.fCloud, true) },
+                        { label: '☀ UV',    f: `${h.fUV}`,             a: `${h.aUV}`,             d: delta(h.aUV, h.fUV) },
                         { label: '🌡 Temp', f: fmtTemp(h.fTemp, units), a: fmtTemp(h.aTemp, units), d: delta(h.aTemp, h.fTemp) },
-                        { label: '🌬 Wind', f: fmtWind(h.fWind, units), a: fmtWind(h.aWind, units), d: delta(h.aWind, h.fWind, true) },
-                      ].map(v => (
-                        <div key={v.label} className="flex flex-col items-center gap-0.5 px-1 py-2 border-r border-border last:border-r-0">
-                          <span className="text-muted-foreground font-medium mb-1">{v.label}</span>
-                          <span className="text-muted-foreground/60">fcst</span>
-                          <span className="text-foreground font-medium">{v.f}</span>
-                          <span className="text-muted-foreground/60 mt-1">actual</span>
-                          <span className="text-foreground font-medium">{v.a}</span>
-                          <span className="mt-1">{v.d}</span>
+                      ];
+                      return (
+                        <div className="grid text-[10px]" style={{ gridTemplateColumns: `repeat(4, 1fr) ${hasIpcj ? '1.6fr' : '1fr'}` }}>
+                          {cols.map(v => (
+                            <div key={v.label} className="flex flex-col items-center gap-0.5 px-1 py-2 border-r border-border">
+                              <span className="text-muted-foreground font-medium mb-1">{v.label}</span>
+                              <span className="text-muted-foreground/60">fcst</span>
+                              <span className="text-foreground font-medium">{v.f}</span>
+                              <span className="text-muted-foreground/60 mt-1">actual</span>
+                              <span className="text-foreground font-medium">{v.a}</span>
+                              <span className="mt-1">{v.d}</span>
+                            </div>
+                          ))}
+                          {/* Wind — expanded to show raw + IPCJ */}
+                          <div className="flex flex-col items-center gap-0.5 px-1 py-2">
+                            <span className="text-muted-foreground font-medium mb-1">🌬 Wind</span>
+                            <span className="text-muted-foreground/60">fcst</span>
+                            <span className="text-foreground font-medium">{fmtWind(h.fWind, units)}</span>
+                            {hasIpcj && (
+                              <>
+                                <span className="text-orange-500/70 mt-0.5">+IPCJ</span>
+                                <span className="text-orange-500 font-medium">{fmtWind(fWindIpcj, units)}</span>
+                              </>
+                            )}
+                            <span className="text-muted-foreground/60 mt-1">actual</span>
+                            <span className="text-foreground font-medium">{fmtWind(h.aWind, units)}</span>
+                            <span className="mt-1">{delta(h.aWind, h.fWind, true)}</span>
+                          </div>
                         </div>
-                      ))}
-                    </div>
+                      );
+                    })()}
                   </div>
                 );
               })}
@@ -996,6 +1019,7 @@ export default function Home() {
               lat={location.lat}
               lon={location.lon}
               units={units}
+              ipcjExposure={ipcjExposure}
             />
           </>
         )}
