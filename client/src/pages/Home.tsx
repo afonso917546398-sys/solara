@@ -523,9 +523,9 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
                       <span className="text-xs font-semibold text-foreground">{s.label}</span>
-                      <span className="text-[10px] text-muted-foreground font-mono">{s.range}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{s.range}</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground mt-0.5 leading-relaxed">{s.desc}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{s.desc}</p>
                   </div>
                 </div>
               ))}
@@ -563,9 +563,9 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 mb-0.5">
                       <span className="text-xs font-semibold text-foreground">{v.name}</span>
-                      <span className="text-[10px] text-muted-foreground">max {v.weight}</span>
+                      <span className="text-xs text-muted-foreground">max {v.weight}</span>
                     </div>
-                    <p className="text-[10px] text-muted-foreground leading-relaxed">{v.detail}</p>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{v.detail}</p>
                   </div>
                 </div>
               ))}
@@ -575,9 +575,9 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
             <div className="mt-4 bg-muted/40 rounded-xl p-3">
               <div className="flex items-baseline gap-2 mb-2">
                 <span className="text-xs font-semibold text-foreground">🌬 Wind multiplier</span>
-                <span className="text-[10px] text-muted-foreground">scales the entire base score</span>
+                <span className="text-xs text-muted-foreground">scales the entire base score</span>
               </div>
-              <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+              <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                 Wind doesn't block UV — but it determines whether you'll actually stay outside.
                 The multiplier is continuous, not stepped: penalties increase smoothly with speed.
               </p>
@@ -588,7 +588,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
                   { range: "30–50 km/h", label: "Strong penalty",mult: "×0.7→0.4", note: "Fresh to strong breeze. Extended stays unlikely." },
                   { range: "> 50 km/h",  label: "Severe",        mult: "×0.3", note: "Near gale. Most people will not stay out." },
                 ].map(r => (
-                  <div key={r.range} className="flex items-center gap-2 text-[10px]">
+                  <div key={r.range} className="flex items-center gap-2 text-xs">
                     <span className="font-mono text-muted-foreground w-20 shrink-0">{r.range}</span>
                     <span className="font-semibold text-foreground w-12 shrink-0">{r.mult}</span>
                     <span className="text-muted-foreground">{r.note}</span>
@@ -609,14 +609,14 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
               <div>
                 <div className="text-xs font-semibold text-foreground mb-0.5">Nortada wind (IPCJ)</div>
-                <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+                <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                   ERA5 — the model behind Open-Meteo — runs at ~31 km resolution and
                   systematically underestimates the Iberian Coastal Low-Level Jet (the Nortada),
                   a persistent northerly along Portugal's Atlantic coast present on ~70% of summer days,
                   with model underestimates of 7–14 km/h at the coast.
                   (Soares et al., 2014; DIVA-Portal 2014)
                 </p>
-                <p className="text-[10px] text-muted-foreground leading-relaxed mb-2">
+                <p className="text-xs text-muted-foreground leading-relaxed mb-2">
                   Solara classifies each location automatically and multiplies the reported wind
                   before scoring. The corrected value appears as{' '}
                   <span className="text-orange-500 font-medium">IPCJ: xx km/h</span> in each hour row
@@ -631,7 +631,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
                   ].map(t => (
                     <div key={t.tier} className="flex items-start gap-2">
                       <span className={`w-2 h-2 rounded-full shrink-0 mt-1 ${t.color}`} />
-                      <div className="text-[10px] text-muted-foreground leading-relaxed">
+                      <div className="text-xs text-muted-foreground leading-relaxed">
                         <span className="font-semibold text-foreground">{t.tier} — </span>{t.desc}
                       </div>
                     </div>
@@ -639,7 +639,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
                 </div>
                 {/* Multiplier table */}
                 <div className="bg-muted/40 rounded-xl overflow-hidden">
-                  <table className="w-full text-[10px]">
+                  <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-border">
                         <th className="text-left px-2 py-1.5 font-semibold text-foreground">Season</th>
@@ -671,7 +671,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
               <div>
                 <div className="text-xs font-semibold text-foreground mb-0.5">Radiation saturation</div>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Above 500 W/m², the subjective benefit of more direct sun plateaus — 600 vs 750 W/m²
                   feels similar to a sun-lover. A linear model would over-reward peak August
                   over a clear April afternoon. Above 500 W/m² Solara applies a square-root
@@ -681,7 +681,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
               <div>
                 <div className="text-xs font-semibold text-foreground mb-0.5">UV fallback estimate</div>
-                <p className="text-[10px] text-muted-foreground leading-relaxed">
+                <p className="text-xs text-muted-foreground leading-relaxed">
                   Open-Meteo's forecast API sometimes returns null UV. When that happens, Solara
                   estimates UV from direct radiation using a zenith-angle weight (peaks at solar noon)
                   and a seasonal efficiency factor — summer ozone over Iberia is thinner,
@@ -693,7 +693,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
           {/* Data source */}
           <div className="border-t border-border pt-4">
-            <p className="text-[10px] text-muted-foreground leading-relaxed">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               Weather data from <span className="text-foreground font-medium">Open-Meteo</span> (ERA5-backed forecast and archive APIs).
               Location search via <span className="text-foreground font-medium">Nominatim / OpenStreetMap</span>.
               Wind correction: Soares et al., 2014, Univ. Lisbon; DIVA-Portal IPCJ Climatology, 2014.
