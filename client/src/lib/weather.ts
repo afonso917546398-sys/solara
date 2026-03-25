@@ -46,82 +46,78 @@ function wmoSunPenalty(code: number): number {
   return -10;
 }
 
-// ── Qualification thresholds ─────────────────────────────────────
-// Below any of these, the hour does not qualify for meaningful sun exposure.
-// Thresholds are science-based but have deliberate margin so borderline
-// hours near the floor still show a low (non-zero) score rather than
-// a hard cliff — they just score poorly.
+// ── Afonso Sun-Lover Index ───────────────────────────────────────────
+// A personal preference index: higher scores = hotter, sunnier, higher UV,
+// lower wind. Not a health-safety recommendation.
+//
+// Raw API fields used (all already fetched from Open-Meteo):
+//   apparentTemp     °C    feels-like temperature
+//   directRadiation  W/m²  actual sunlight hitting the ground
+//   cloudCover       %     0 = clear sky, 100 = fully overcast
+//   uvIndex          –     0–11+ scale
+//   windSpeed        km/h  at 10m
+//   isDay            0|1   0 = night, always scores 0
+//   weatherCode      WMO   fog/rain/storm always scores 0
+
+// kept for About panel display only (no longer used as hard gates)
 export const THRESHOLDS = {
-  // UV < 3 = no UVB → no vitamin D synthesis (GrassrootsHealth, SunSmart)
   uvMin: 3,
-  // Cloud > 75% (~6.5 octas) → vitamin D exposure time multiplies 2x+ (PubMed 23108371)
   cloudMax: 75,
-  // Direct radiation < 120 W/m² ≈ heavily overcast — not practically useful outdoors
   radMin: 120,
-  // Feels-like < 8°C → too cold to expose enough skin to benefit
   tempMin: 8,
 };
 
+// ── Wind multiplier ──────────────────────────────────────────────────
+// Smooth continuous multiplier (not step-based).
+// ≤ 8 km/h  → 1.0   (calm, full score)
+// 8–15 km/h → 1.0→0.8 (gentle breeze, light penalty)
+// 15–25 km/h→ 0.8→0.5 (moderate wind, noticeable)
+// > 25 km/h → 0.3   (strong wind, heavy penalty)
+function windFactor(ws: number): number {
+  if (ws <= 8)  return 1.0;
+  if (ws <= 15) return 1.0 - 0.2 * (ws - 8) / (15 - 8);
+  if (ws <= 25) return 0.8 - 0.3 * (ws - 15) / (25 - 15);
+  return 0.3;
+}
+
+// ── Main scoring function ──────────────────────────────────────────────
 export function calcHourScore(h: Omit<HourData, 'sunScore'>): number {
+  // Night — always 0
   if (!h.isDay) return 0;
 
-  // Hard disqualifiers — conditions where exposure isn't physiologically meaningful.
-  // WMO codes for fog/rain/storm are also hard disqualifiers regardless of other numbers.
-  const badWeather = (h.weatherCode >= 45 && h.weatherCode <= 49) ||
+  // Fog / rain / thunderstorm — always 0 regardless of other variables
+  const badWeather =
+    (h.weatherCode >= 45 && h.weatherCode <= 49) ||
     (h.weatherCode >= 51 && h.weatherCode <= 82) ||
     h.weatherCode >= 95;
   if (badWeather) return 0;
 
-  // Soft gates: hours below minimums score in a reduced 0–30 range
-  // so they appear clearly inferior without a jarring cliff.
-  const belowUV    = h.uvIndex < THRESHOLDS.uvMin;
-  const belowRad   = h.directRadiation < THRESHOLDS.radMin;
-  const belowTemp  = h.apparentTemp < THRESHOLDS.tempMin;
-  const tooCloud   = h.cloudCover > THRESHOLDS.cloudMax;
-  const disqualified = belowUV || belowRad || belowTemp || tooCloud;
+  // ── 1. temp_term: apparentTemp 10–40°C → 0–25 pts ───────────────
+  // Linear. Below 10°C = 0 (can't expose skin). Above 40°C = capped at 25.
+  // No hard disqualification — cold just scores low, not zero.
+  const tempTerm = Math.max(0, Math.min(25,
+    ((h.apparentTemp - 10) / (40 - 10)) * 25
+  ));
 
-  // ── Score within qualifying range (0–100) ──────────────────────
-  // Only reached when all thresholds are cleared.
-  // Each component scores relative to the range ABOVE the threshold.
+  // ── 2. sun_term: directRadiation 0–800 W/m² → 0–35 pts ─────────
+  // Linear. 0 W/m² = no sun, 800 W/m² = peak summer Iberia noon.
+  const sunTerm = Math.min(35, (h.directRadiation / 800) * 35);
 
-  // 1. Cloud cover: 0–75% qualified range → 0–45 pts
-  //    Scored from 0% (best) down to the 75% ceiling.
-  const cloudScore = Math.round((1 - h.cloudCover / THRESHOLDS.cloudMax) * 45);
+  // ── 3. cloud_term: cloudCover 0–100% → 0–25 pts ──────────────
+  // Inverted linear. Clear sky (0%) = 25 pts. Full overcast (100%) = 0 pts.
+  const cloudTerm = ((100 - h.cloudCover) / 100) * 25;
 
-  // 2. Direct radiation: 120–800 W/m² qualified range → 0–30 pts
-  //    sqrt scaling preserves sensitivity at lower end.
-  const radRange = 800 - THRESHOLDS.radMin;
-  const radAbove = Math.max(0, h.directRadiation - THRESHOLDS.radMin);
-  const radScore = Math.round(Math.min(30, (Math.sqrt(radAbove) / Math.sqrt(radRange)) * 30));
+  // ── 4. uv_term: uvIndex 0–10 → 0–15 pts ────────────────────
+  // Capped at UV 10 (extreme). Higher = more sun-lover appeal.
+  const uvTerm = Math.min(15, (h.uvIndex / 10) * 15);
 
-  // 3. UV index: 3–8 qualified range → 0–15 pts
-  const uvRange = 8 - THRESHOLDS.uvMin;
-  const uvAbove = Math.max(0, h.uvIndex - THRESHOLDS.uvMin);
-  const uvScore = Math.round(Math.min(15, (uvAbove / uvRange) * 15));
+  // ── Base score (sum of four terms, max ≈ 100) ─────────────────
+  const base = tempTerm + sunTerm + cloudTerm + uvTerm;
 
-  // 4. Feels-like temp: 8–22°C qualified range → 0–10 pts
-  const tempRange = 22 - THRESHOLDS.tempMin;
-  const tempAbove = Math.max(0, Math.min(tempRange, h.apparentTemp - THRESHOLDS.tempMin));
-  const tempScore = Math.round((tempAbove / tempRange) * 10);
+  // ── 5. Wind multiplier (continuous, not step-based) ─────────────
+  const score = base * windFactor(h.windSpeed);
 
-  // 5. Wind comfort penalty (Beaufort scale) → 0–15 pts deducted
-  //    Beaufort 5 (29 km/h) = small trees sway, noticeably uncomfortable
-  //    Beaufort 6 (39 km/h) = large branches move, hard to use umbrella
-  //    Beaufort 7 (50 km/h) = whole trees in motion, effort to walk against
-  //    Wind does not block light — this is a comfort/stay-outdoors penalty only.
-  let windPenalty = 0;
-  if (h.windSpeed >= 50) windPenalty = 15;       // Beaufort 7+ — most people won't stay out
-  else if (h.windSpeed >= 39) windPenalty = 10;  // Beaufort 6 — unpleasant
-  else if (h.windSpeed >= 29) windPenalty = 5;   // Beaufort 5 — noticeably uncomfortable
-
-  const qualified = cloudScore + radScore + uvScore + tempScore - windPenalty; // max ~100
-
-  if (disqualified) {
-    // Show how close to qualifying — max 30 so it's clearly below any real hour
-    return Math.min(30, Math.round(qualified * 0.3));
-  }
-
-  return Math.max(0, Math.min(100, qualified));
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 function calcDayScore(hours: HourData[]): number {

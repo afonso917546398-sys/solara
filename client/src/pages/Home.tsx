@@ -566,7 +566,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border">
-          <h2 className="text-base font-bold text-foreground">About the score</h2>
+          <h2 className="text-base font-bold text-foreground">Afonso Sun-Lover Index</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X size={18} />
           </button>
@@ -577,13 +577,28 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
           {/* How it works */}
           <div>
-            <h3 className="font-semibold text-foreground mb-2">How the score works</h3>
+            <h3 className="font-semibold text-foreground mb-2">How the index works</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Each daylight hour is scored 0–100 across five variables: UV index, direct solar radiation,
-              cloud cover, feels-like temperature, and wind speed. Hours below the minimum thresholds
-              are capped at 30 — physiologically not meaningful regardless of other conditions.
-              The daily score blends the average of all daylight hours with the best 2-hour peak window.
+              The Afonso Sun-Lover Index scores each daylight hour 0–100 based on four additive terms
+              (temperature, solar radiation, cloud cover, UV index), then applies a continuous wind
+              multiplier. Higher scores mean hotter, sunnier, higher-UV, lower-wind conditions.
             </p>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-1.5">
+              <strong className="text-foreground">This is a personal preference index, not a health-safety
+              recommendation.</strong> Conditions that score highest — high UV, high heat, strong direct sun —
+              also carry the greatest risk of sunburn, heat stress, and UV overexposure for most people.
+              Use the exposure time estimates to stay within safe limits for your skin type.
+            </p>
+            <div className="mt-2 bg-muted/40 rounded-xl p-3 text-xs text-muted-foreground">
+              <div className="font-semibold text-foreground mb-1">Term weights (max base = 100)</div>
+              <div className="flex flex-col gap-0.5">
+                <div><span className="font-medium text-foreground">Temperature</span> — apparentTemp 10–40°C → 0–25 pts. Linear.</div>
+                <div><span className="font-medium text-foreground">Solar radiation</span> — directRadiation 0–800 W/m² → 0–35 pts. Linear.</div>
+                <div><span className="font-medium text-foreground">Cloud cover</span> — cloudCover 0–100% → 25–0 pts. Inverted linear.</div>
+                <div><span className="font-medium text-foreground">UV index</span> — uvIndex 0–10 → 0–15 pts. Linear.</div>
+                <div className="mt-1"><span className="font-medium text-foreground">Wind multiplier</span> — ≤8 km/h: ×1.0 · 8–15: ×1.0→0.8 · 15–25: ×0.8→0.5 · &gt;25: ×0.3</div>
+              </div>
+            </div>
           </div>
 
           {/* Score labels */}
@@ -1297,7 +1312,7 @@ export default function Home() {
               title="About the score"
             >
               <Info size={14} />
-              <span className="hidden sm:inline">About the score</span>
+              <span className="hidden sm:inline">Sun-Lover Index</span>
             </button>
             <button
               data-testid="btn-change-location"
