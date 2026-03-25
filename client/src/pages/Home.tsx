@@ -345,10 +345,10 @@ function LocationGate({ onLocation }: { onLocation: (lat: number, lon: number, n
         <div className="text-center">
           <h1 className="text-xl font-bold text-foreground mb-1.5">Solara</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            For people who feel better in the sun — and want to make the most of it.
+            Dialing in on sunny times.
           </p>
           <p className="text-xs text-muted-foreground/70 mt-2 leading-relaxed max-w-xs mx-auto">
-            Sun scores are based on weather data. Everyone’s skin and health needs are different — use your own judgement and consult a doctor if you have light-sensitive conditions.
+            This app was designed for Superman. He absorbs sun radiation and uses it for his daily hero activities. All others using it should exercise caution and heed health authorities’ recommendations on sun exposure.
           </p>
         </div>
 
