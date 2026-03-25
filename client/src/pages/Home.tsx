@@ -276,6 +276,25 @@ function DayCard({ day, locationName, skinTypeId, onChangeSkin, units }: {
             })}
           </div>
 
+          {/* IPCJ correction note */}
+          <div className="bg-muted/40 rounded-xl p-3 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-foreground">Nortada wind correction</span>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              The Iberian Peninsula Coastal Low-Level Jet (IPCJ) — the summer northerly wind
+              known as the Nortada — is systematically underestimated by weather models (ERA5/Open-Meteo)
+              at west-facing Atlantic beaches. Research using 9km downscaling found the jet present
+              on ~70% of summer days, with model underestimates of 7–14 km/h at the coast.
+              (Soares et al., 2014, Univ. Lisbon; IPCJ Climatology, DIVA-Portal 2014)
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+              Solara automatically applies a correction to reported wind speed based on
+              location, month, and hour — without any manual input required. Atlantic-facing
+              beaches (Praia de Mira, Costa da Caparica, Guincho, Nazaré, Ofir, etc.) receive
+              up to ×1.4 in summer afternoons. South-facing Algarve beaches, Madeira and
+              Açores receive no correction.
+            </p>
+          </div>
+
           {/* Exposure estimate */}
           <ExposureWidget day={day} skinTypeId={skinTypeId} onChangeSkin={onChangeSkin} units={units} />
 
@@ -766,6 +785,25 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
             </div>
           </div>
 
+          {/* IPCJ correction note */}
+          <div className="bg-muted/40 rounded-xl p-3 flex flex-col gap-1">
+            <span className="text-xs font-semibold text-foreground">Nortada wind correction</span>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              The Iberian Peninsula Coastal Low-Level Jet (IPCJ) — the summer northerly wind
+              known as the Nortada — is systematically underestimated by weather models (ERA5/Open-Meteo)
+              at west-facing Atlantic beaches. Research using 9km downscaling found the jet present
+              on ~70% of summer days, with model underestimates of 7–14 km/h at the coast.
+              (Soares et al., 2014, Univ. Lisbon; IPCJ Climatology, DIVA-Portal 2014)
+            </p>
+            <p className="text-xs text-muted-foreground leading-relaxed mt-0.5">
+              Solara automatically applies a correction to reported wind speed based on
+              location, month, and hour — without any manual input required. Atlantic-facing
+              beaches (Praia de Mira, Costa da Caparica, Guincho, Nazaré, Ofir, etc.) receive
+              up to ×1.4 in summer afternoons. South-facing Algarve beaches, Madeira and
+              Açores receive no correction.
+            </p>
+          </div>
+
           {/* Exposure estimate */}
           <div>
             <h3 className="font-semibold text-foreground mb-1">Exposure time estimate</h3>
@@ -1202,7 +1240,6 @@ export default function Home() {
   const [units, setUnits] = useState<UnitSystem>('metric');
   const [introDone, setIntroDone] = useState<boolean | null>(null);
   const [ipcjExposure, setIpcjExposure] = useState<IpcjExposure>('none');
-  const [ipcjOverridden, setIpcjOverridden] = useState(false); // user manually toggled
   const qc = useQueryClient();
 
   // Load saved preferences on mount
@@ -1241,21 +1278,12 @@ export default function Home() {
     apiRequest('POST', '/api/prefs/units', { value: next });
   }, [units]);
 
-  // Auto-classify IPCJ exposure when location changes (unless user overrode)
+  // Auto-classify IPCJ exposure whenever location changes — fully automatic
   useEffect(() => {
-    if (location && !ipcjOverridden) {
+    if (location) {
       setIpcjExposure(defaultIpcjExposure(location.lat, location.lon));
     }
   }, [location?.lat, location?.lon]);
-
-  const toggleIpcj = useCallback(() => {
-    setIpcjOverridden(true);
-    setIpcjExposure(prev =>
-      prev === 'none' ? 'high'
-      : prev === 'high' ? 'medium'
-      : 'none'
-    );
-  }, []);
 
   const { data, isLoading, isError, refetch } = useQuery<SunForecast>({
     queryKey: ['sun', location?.lat, location?.lon, ipcjExposure],
@@ -1315,19 +1343,7 @@ export default function Home() {
             <span className="font-bold text-base">Solara</span>
           </div>
           <div className="flex items-center gap-3">
-            {/* IPCJ wind correction toggle */}
-            <button
-              data-testid="btn-toggle-ipcj"
-              onClick={toggleIpcj}
-              title={`Nortada wind correction: ${ipcjExposure}. Tap to cycle: none → high → medium`}
-              className={`text-xs font-medium transition-colors px-2 py-1 rounded-lg hover:bg-accent
-                ${ ipcjExposure !== 'none'
-                  ? 'text-amber-600 dark:text-amber-400'
-                  : 'text-muted-foreground hover:text-foreground'
-                }`}
-            >
-              {ipcjExposure === 'none'   ? '🌬️' : ipcjExposure === 'high' ? '🌬️↑↑' : '🌬️↑'}
-            </button>
+
             <button
               data-testid="btn-toggle-units"
               onClick={toggleUnits}
