@@ -506,16 +506,15 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
           <div>
             <h3 className="font-semibold text-foreground mb-1">Score labels</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-              Each daylight hour is scored 0–100. The score reflects how good conditions are
-              for being outdoors in the sun — combining light quality, warmth, and wind comfort.
+              Each daylight hour is scored 0–100. The score reflects the big star’s potential to power Superman and normal people.
             </p>
             <div className="flex flex-col gap-2.5">
               {[
-                { label: "Prime sun",  range: "80–100", color: "#ea580c", desc: "Exceptional. High radiation, strong UV, warm temperature, low wind. Rare outside peak summer." },
-                { label: "Good sun",   range: "65–79",  color: "#eab308", desc: "Solid conditions across all variables. Proper beach or terrace weather." },
-                { label: "Fair sun",   range: "45–64",  color: "#fef08a", border: true, desc: "One variable is limiting — cold, partial cloud, or elevated wind. Still worth going out." },
-                { label: "Weak sun",   range: "25–44",  color: "#d1d5db", desc: "Conditions are marginal. A clear cold winter day, or warm but overcast. Brief benefit only." },
-                { label: "No sun",     range: "0–24",   color: "#e5e7eb", desc: "Overcast, rainy, foggy, or night. Score carries no meaningful signal." },
+                { label: "Prime sun",  range: "80–100", color: "#ea580c", desc: "Everything aligned. Peak radiation, strong UV, warm, low wind. The star is performing. Rare outside summer." },
+                { label: "Good sun",   range: "65–79",  color: "#eab308", desc: "Solid across all variables. This is what you came for." },
+                { label: "Fair sun",   range: "45–64",  color: "#fef08a", border: true, desc: "Something is holding it back — cold air, partial cloud, or wind. Still worth it." },
+                { label: "Weak sun",   range: "25–44",  color: "#d1d5db", desc: "Marginal. A clear January noon or a warm overcast afternoon. The star is trying." },
+                { label: "No sun",     range: "0–24",   color: "#e5e7eb", desc: "Overcast, rainy, or night. Nothing to score here." },
               ].map(s => (
                 <div key={s.label} className="flex items-start gap-3">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1"
@@ -536,8 +535,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
           <div>
             <h3 className="font-semibold text-foreground mb-1">How the score is built</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-              Four variables add up to a base score, then a wind multiplier scales the result down.
-              No single variable can make or break the score — they work together.
+              Four variables add up, then wind scales the result. The star provides the inputs. Wind decides if you’ll stay long enough to benefit.
             </p>
             <div className="flex flex-col gap-3">
               {[
@@ -547,15 +545,15 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
                 },
                 {
                   name: "Cloud cover", weight: "15 pts", icon: "☁",
-                  detail: "Lower weight than radiation to avoid double-penalising overcast hours — radiation already drops when cloud thickens. The cloud term captures partial coverage that radiation alone misses."
+                  detail: "Lower weight than radiation — cloud’s effect is already in the radiation number. This term catches the partial coverage radiation misses."
                 },
                 {
                   name: "UV index", weight: "15 pts", icon: "☀",
-                  detail: "UV 0–10 scored linearly. When Open-Meteo returns no UV (common for historical dates), Solara estimates it from radiation and solar zenith angle with a seasonal correction."
+                  detail: "Scored 0–10. When the forecast API returns nothing, Solara estimates it from radiation and solar angle with a seasonal factor."
                 },
                 {
                   name: "Feels-like temperature", weight: "25 pts", icon: "🌡",
-                  detail: "Apparent temperature 10–40°C scored linearly. Below 10°C contributes zero — not because sun is absent, but because meaningful skin exposure becomes impractical. A clear 15°C winter day still scores well on the other three terms."
+                  detail: "Below 10°C the term is zero — not because the star stopped, but because normal people won’t expose enough skin to benefit. Superman is unaffected."
                 },
               ].map(v => (
                 <div key={v.name} className="flex items-start gap-3">
@@ -602,8 +600,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
           <div>
             <h3 className="font-semibold text-foreground mb-1">Automatic corrections</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-              Raw weather model data has known biases for specific locations and conditions.
-              Solara applies three corrections silently — no settings required.
+              Weather models have known blind spots. Solara corrects for three of them, automatically.
             </p>
             <div className="flex flex-col gap-4">
 
@@ -672,10 +669,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
               <div>
                 <div className="text-xs font-semibold text-foreground mb-0.5">Radiation saturation</div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Above 500 W/m², the subjective benefit of more direct sun plateaus — 600 vs 750 W/m²
-                  feels similar to a sun-lover. A linear model would over-reward peak August
-                  over a clear April afternoon. Above 500 W/m² Solara applies a square-root
-                  compression, so 800 W/m² maps to ~680 effective W/m².
+                  600 vs 750 W/m² feels the same to a normal person. A linear model over-rewards peak summer. Above 500 W/m² Solara compresses the range with a square-root curve, so 800 W/m² maps to ~680 effective W/m².
                 </p>
               </div>
 
