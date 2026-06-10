@@ -1,5 +1,5 @@
-const CACHE = "solara-v1";
-const STATIC = ["/", "/index.html"];
+const CACHE = "solara-v2";
+const STATIC = ["./", "./index.html"];
 
 self.addEventListener("install", e => {
   e.waitUntil(
@@ -18,8 +18,8 @@ self.addEventListener("activate", e => {
 self.addEventListener("fetch", e => {
   const url = new URL(e.request.url);
 
-  // Always fetch API calls from network — never cache them
-  if (url.pathname.startsWith("/api") || url.hostname.includes("railway") || url.hostname.includes("open-meteo") || url.hostname.includes("nominatim")) {
+  // Always fetch weather/geocoding calls from network — never cache them
+  if (url.hostname.includes("open-meteo") || url.hostname.includes("nominatim")) {
     e.respondWith(fetch(e.request));
     return;
   }

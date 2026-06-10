@@ -1,13 +1,28 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import * as store from "./localStore";
 
-const API_BASE = (import.meta.env.VITE_API_URL as string) ||
-  ("__PORT_5000__".startsWith("__") ? "" : "__PORT_5000__");
-
-async function throwIfResNotOk(res: Response) {
-  if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+// Routes the old "/api/..." paths to localStorage so the app runs fully
+// static — no backend required.
+function handleLocal(method: string, url: string, data?: any): unknown {
+  const prefMatch = url.match(/^\/api\/prefs\/(.+)$/);
+  if (prefMatch) {
+    if (method === "GET") return { value: store.getPref(prefMatch[1]) };
+    store.setPref(prefMatch[1], String(data?.value ?? ""));
+    return { ok: true };
   }
+
+  const favIdMatch = url.match(/^\/api\/favourites\/(\d+)$/);
+  if (favIdMatch && method === "DELETE") {
+    store.removeFavourite(Number(favIdMatch[1]));
+    return { ok: true };
+  }
+
+  if (url === "/api/favourites") {
+    if (method === "GET") return store.getFavourites();
+    return store.addFavourite(data);
+  }
+
+  throw new Error(`Unknown local route: ${method} ${url}`);
 }
 
 export async function apiRequest(
@@ -15,36 +30,19 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(`${API_BASE}${url}`, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+  const result = handleLocal(method, url, data);
+  return new Response(JSON.stringify(result), {
+    headers: { "Content-Type": "application/json" },
   });
-
-  await throwIfResNotOk(res);
-  return res;
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(`${API_BASE}${queryKey.join("/")}`);
-
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
-    }
-
-    await throwIfResNotOk(res);
-    return await res.json();
-  };
+const localQueryFn: QueryFunction = async ({ queryKey }) =>
+  handleLocal("GET", queryKey.join("/"));
 
 export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      queryFn: getQueryFn({ on401: "throw" }),
+      queryFn: localQueryFn,
       refetchInterval: false,
       refetchOnWindowFocus: false,
       staleTime: Infinity,

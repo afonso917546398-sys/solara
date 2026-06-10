@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
-import type { Favourite } from "../../../shared/schema";
+import type { Favourite } from "@/lib/localStore";
 import {
   MapPin, Sun, Thermometer, Cloud, Wind,
   ChevronDown, ChevronUp, Sunrise, Sunset,
