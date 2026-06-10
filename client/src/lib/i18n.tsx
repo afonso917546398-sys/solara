@@ -129,7 +129,7 @@ const en = {
 
 const pt: typeof en = {
   // Intro / location gate
-  tagline: "De olho nas horas de sol.",
+  tagline: "Momentos soalheiros.",
   pitch: "As outras aplicações mostram-lhe a previsão. O Solara classifica-a para quem precisa do sol.",
   superman1: "Esta aplicação foi concebida para o Super-Homem. Ele absorve a radiação solar e usa-a nas suas atividades heroicas do dia a dia.",
   superman2: "Todos os outros utilizadores devem ter cuidado e seguir as recomendações das autoridades de saúde sobre exposição solar.",
@@ -189,7 +189,7 @@ const pt: typeof en = {
     scoreLabelsTitle: "Níveis de pontuação",
     scoreLabelsIntro: "Cada hora de luz do dia recebe uma pontuação de 0 a 100. A pontuação reflete o potencial da grande estrela para dar energia ao Super-Homem e às pessoas normais.",
     scoreLabels: [
-      { label: "Sol de primeira", range: "80–100", desc: "Tudo alinhado. Radiação no pico, UV forte, calor, pouco vento. A estrela está em grande forma. Raro fora do verão." },
+      { label: "Sol de luxo", range: "80–100", desc: "Tudo alinhado. Radiação no pico, UV forte, calor, pouco vento. A estrela está em grande forma. Raro fora do verão." },
       { label: "Bom sol", range: "65–79", desc: "Sólido em todas as variáveis. É disto que estava à procura." },
       { label: "Sol razoável", range: "45–64", desc: "Algo o está a travar — ar frio, nuvens parciais ou vento. Ainda assim, vale a pena." },
       { label: "Sol fraco", range: "25–44", desc: "Marginal. Um meio-dia limpo de janeiro ou uma tarde quente e encoberta. A estrela está a esforçar-se." },
