@@ -199,7 +199,8 @@ export async function fetchSunForecast(
   lat: number,
   lon: number,
   locationName: string,
-  ipcjExposure: import('./corrections').IpcjExposure = 'none'
+  ipcjExposure: import('./corrections').IpcjExposure = 'none',
+  locale: string = 'en-GB'
 ): Promise<SunForecast> {
   const url = new URL('https://api.open-meteo.com/v1/forecast');
   url.searchParams.set('latitude', lat.toString());
@@ -276,8 +277,8 @@ export async function fetchSunForecast(
 
     return {
       date,
-      weekday: d.toLocaleDateString('en-GB', { weekday: 'short' }),
-      dateLabel: d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }),
+      weekday: d.toLocaleDateString(locale, { weekday: 'short' }),
+      dateLabel: d.toLocaleDateString(locale, { day: 'numeric', month: 'short' }),
       isToday: date === today,
       sunrise: parseTime(daily.sunrise[i]),
       sunset: parseTime(daily.sunset[i]),

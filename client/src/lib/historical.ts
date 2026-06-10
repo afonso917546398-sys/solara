@@ -24,8 +24,6 @@ export interface DayAccuracy {
   bestHour: HourDetail;
 }
 
-const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-
 function fmt(d: Date) { return d.toISOString().slice(0, 10); }
 
 /**
@@ -35,7 +33,8 @@ function fmt(d: Date) { return d.toISOString().slice(0, 10); }
  */
 export async function fetchActualScores(
   lat: number,
-  lon: number
+  lon: number,
+  locale: string = 'en-GB'
 ): Promise<DayAccuracy[]> {
   const today = new Date();
   const end = new Date(today);
@@ -90,7 +89,7 @@ export async function fetchActualScores(
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dateStr = fmt(d);
-    const weekday = WEEKDAYS[d.getDay()];
+    const weekday = d.toLocaleDateString(locale, { weekday: 'short' });
 
     // Collect all daylight hours with actual scores
     const hours: Array<{ hour: number; aScore: number }> = [];

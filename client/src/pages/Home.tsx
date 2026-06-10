@@ -25,6 +25,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import type { Favourite } from "@/lib/localStore";
+import { useLang, LangToggle } from "@/lib/i18n";
 import {
   MapPin, Sun, Thermometer, Cloud, Wind,
   ChevronDown, ChevronUp, Sunrise, Sunset,
@@ -110,6 +111,7 @@ function ScoreDot({ score, size = 44 }: { score: number; size?: number }) {
 
 // ── Hour Row ──────────────────────────────────────────────────────
 function HourRow({ h, units, ipcjExposure, dayMonth }: { h: HourData; units: UnitSystem; ipcjExposure: IpcjExposure; dayMonth: number }) {
+  const { s } = useLang();
   const pct = h.isDay ? h.sunScore : 0;
   return (
     <div className="flex flex-col gap-1.5 px-3 py-2.5 rounded-lg text-sm transition-colors hover:bg-muted/50">
@@ -129,19 +131,19 @@ function HourRow({ h, units, ipcjExposure, dayMonth }: { h: HourData; units: Uni
       {/* Raw variables row — only during daylight, ordered by score weight: radiation, cloud, UV, temp, wind */}
       {h.isDay && (
         <div className="flex flex-wrap gap-x-3 gap-y-0.5 pl-[48px] text-xs text-muted-foreground">
-          <span className="flex items-center gap-0.5" title="Direct radiation (W/m²)">
+          <span className="flex items-center gap-0.5" title={s.titleRadiation}>
             ⚡ {Math.round(h.directRadiation)} W/m²
           </span>
-          <span className="flex items-center gap-0.5" title="Cloud cover">
+          <span className="flex items-center gap-0.5" title={s.titleCloud}>
             <Cloud size={11} />{h.cloudCover}%
           </span>
-          <span className="flex items-center gap-0.5" title="UV Index">
+          <span className="flex items-center gap-0.5" title={s.titleUV}>
             <Sun size={11} />UV {h.uvIndex.toFixed(1)}
           </span>
-          <span className="flex items-center gap-0.5" title="Feels-like temperature">
-            <Thermometer size={11} />{fmtTemp(h.apparentTemp, units)} feels-like
+          <span className="flex items-center gap-0.5" title={s.titleFeels}>
+            <Thermometer size={11} />{s.feelsLike(fmtTemp(h.apparentTemp, units))}
           </span>
-          <span className="flex items-center gap-0.5" title="Wind speed">
+          <span className="flex items-center gap-0.5" title={s.titleWind}>
             <Wind size={11} />{fmtWind(h.windSpeed, units)}{(() => {
               const factor = ipcjWindFactor(ipcjExposure, dayMonth, h.hour);
               if (factor <= 1.0) return null;
@@ -149,7 +151,7 @@ function HourRow({ h, units, ipcjExposure, dayMonth }: { h: HourData; units: Uni
               return <span className="ml-1 text-[10px] text-muted-foreground">IPCJ: {fmtWind(corrected, units)}</span>;
             })()}
           </span>
-          <span className="text-muted-foreground/50">({fmtTemp(h.temperature, units)} actual)</span>
+          <span className="text-muted-foreground/50">{s.actualTemp(fmtTemp(h.temperature, units))}</span>
         </div>
       )}
     </div>
@@ -164,6 +166,7 @@ function DayCard({ day, locationName, units, ipcjExposure }: {
   units: UnitSystem;
   ipcjExposure: IpcjExposure;
 }) {
+  const { s } = useLang();
   const [expanded, setExpanded] = useState(false);
   const bg = scoreBg(day.dayScore);
   const dayHours = day.hours.filter(h => h.isDay);
@@ -179,7 +182,7 @@ function DayCard({ day, locationName, units, ipcjExposure }: {
         {/* Date */}
         <div className="flex flex-col gap-0 shrink-0 w-10">
           <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider leading-tight">
-            {day.isToday ? 'Today' : day.weekday}
+            {day.isToday ? s.today : day.weekday}
           </div>
           <div className="text-xs font-medium text-foreground leading-tight">{day.dateLabel}</div>
         </div>
@@ -239,10 +242,12 @@ function WeekSummary({ days }: { days: DayData[] }) {
 
 // ── Intro Screen ─────────────────────────────────────────────────
 function IntroScreen({ onDone }: { onDone: () => void }) {
+  const { s } = useLang();
   return (
     <div className="min-h-screen bg-background flex flex-col items-center justify-between px-6 py-12">
-      {/* Top: logo + name */}
-      <div className="flex items-center gap-2.5 self-start">
+      {/* Top: logo + name + language toggle */}
+      <div className="w-full flex items-center justify-between">
+      <div className="flex items-center gap-2.5">
         <svg viewBox="0 0 32 32" width="28" height="28" fill="none">
           <circle cx="16" cy="16" r="6" fill="#f59e0b" />
           {[0,60,120,180,240,300].map((deg: number) => {
@@ -254,20 +259,20 @@ function IntroScreen({ onDone }: { onDone: () => void }) {
         </svg>
         <span className="font-bold text-base tracking-tight">Solara</span>
       </div>
+      <LangToggle />
+      </div>
 
       {/* Centre: headline + copy */}
       <div className="flex flex-col gap-6 max-w-sm w-full">
         <div className="flex flex-col gap-3">
           <h1 className="text-2xl font-bold text-foreground leading-tight">
-            Dialing in on sunny times.
+            {s.tagline}
           </h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Other apps show you the forecast. Solara scores it for people who need the sun.
+            {s.pitch}
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            This app was designed for Superman. He absorbs sun radiation and uses it
-            for his daily hero activities. All others using it should exercise caution
-            and heed health authorities' recommendations on sun exposure.
+            {s.superman1} {s.superman2}
           </p>
         </div>
 
@@ -278,7 +283,7 @@ function IntroScreen({ onDone }: { onDone: () => void }) {
           className="w-full h-12 rounded-xl bg-primary text-primary-foreground
             text-base font-semibold hover:bg-primary/90 transition-colors"
         >
-          Get started
+          {s.getStarted}
         </button>
       </div>
 
@@ -289,6 +294,7 @@ function IntroScreen({ onDone }: { onDone: () => void }) {
 
 // ── Location Gate ─────────────────────────────────────────────────
 function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: number, name: string) => void; onAbout: () => void }) {
+  const { s } = useLang();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeoResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -321,14 +327,15 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
       },
       () => {
         setGpsLoading(false);
-        setGpsError("GPS unavailable — please search for your city above.");
+        setGpsError(s.gpsError);
       },
       { timeout: 8000, maximumAge: 60000 }
     );
-  }, [onLocation]);
+  }, [onLocation, s]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-background">
+    <div className="min-h-screen flex items-center justify-center p-6 bg-background relative">
+      <LangToggle className="absolute top-4 right-4" />
       <div className="max-w-sm w-full flex flex-col items-center gap-6">
         {/* Sun logo */}
         <div className="w-20 h-20 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
@@ -348,16 +355,16 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
         <div className="text-center">
           <h1 className="text-xl font-bold text-foreground mb-1.5">Solara</h1>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Dialing in on sunny times.
+            {s.tagline}
           </p>
           <p className="text-sm text-muted-foreground leading-relaxed mt-1">
-            Other apps show you the forecast. Solara scores it for people who need the sun.
+            {s.pitch}
           </p>
           <p className="text-xs text-muted-foreground/70 mt-2 leading-relaxed max-w-xs mx-auto">
-            This app was designed for Superman. He absorbs sun radiation and uses it for his daily hero activities.
+            {s.superman1}
           </p>
           <p className="text-xs text-muted-foreground/70 mt-1 leading-relaxed max-w-xs mx-auto">
-            All others using it should exercise caution and heed health authorities’ recommendations on sun exposure.
+            {s.superman2}
           </p>
         </div>
 
@@ -367,7 +374,7 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
           className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <Info size={13} />
-          About the score
+          {s.aboutScore}
         </button>
 
         {/* City search — primary */}
@@ -378,7 +385,7 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
               ref={inputRef}
               data-testid="input-city-search"
               type="text"
-              placeholder="Search city — e.g. Évora, Lisboa…"
+              placeholder={s.searchPlaceholder}
               value={query}
               onChange={e => setQuery(e.target.value)}
               className="w-full h-11 pl-9 pr-9 rounded-xl border border-input bg-card text-sm
@@ -397,7 +404,7 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
             <div className="w-full bg-card border border-border rounded-xl overflow-hidden shadow-md">
               {searching && (
                 <div className="px-4 py-3 text-sm text-muted-foreground flex items-center gap-2">
-                  <RefreshCw size={13} className="animate-spin" /> Searching…
+                  <RefreshCw size={13} className="animate-spin" /> {s.searching}
                 </div>
               )}
               {results.map((r, i) => (
@@ -421,7 +428,7 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
         {/* GPS divider */}
         <div className="w-full flex items-center gap-3">
           <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground">or</span>
+          <span className="text-xs text-muted-foreground">{s.or}</span>
           <div className="flex-1 h-px bg-border" />
         </div>
 
@@ -434,9 +441,9 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
           className="w-full h-10 text-sm"
         >
           {gpsLoading ? (
-            <><RefreshCw size={14} className="mr-2 animate-spin" />Detecting…</>
+            <><RefreshCw size={14} className="mr-2 animate-spin" />{s.detecting}</>
           ) : (
-            <><MapPin size={14} className="mr-2" />Use my GPS location</>
+            <><MapPin size={14} className="mr-2" />{s.useGps}</>
           )}
         </Button>
 
@@ -445,7 +452,7 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
         )}
 
         <p className="text-xs text-muted-foreground text-center">
-          Location is only used to fetch weather. Nothing is stored.
+          {s.privacyNote}
         </p>
 
         {/* Saved locations — shown to returning users */}
@@ -456,6 +463,7 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
 }
 
 function FavouritesList({ onSelect }: { onSelect: (lat: number, lon: number, name: string) => void }) {
+  const { s } = useLang();
   const { data: favs = [] } = useQuery<Favourite[]>({
     queryKey: ['/api/favourites'],
     staleTime: 0,
@@ -467,7 +475,7 @@ function FavouritesList({ onSelect }: { onSelect: (lat: number, lon: number, nam
     <div className="w-full flex flex-col gap-2">
       <div className="flex items-center gap-3">
         <div className="flex-1 h-px bg-border" />
-        <span className="text-xs text-muted-foreground">saved places</span>
+        <span className="text-xs text-muted-foreground">{s.savedPlaces}</span>
         <div className="flex-1 h-px bg-border" />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -490,6 +498,18 @@ function FavouritesList({ onSelect }: { onSelect: (lat: number, lon: number, nam
 
 // ── About Panel ────────────────────────────────────────────────
 function AboutPanel({ onClose }: { onClose: () => void }) {
+  const { s } = useLang();
+  const a = s.about;
+  // Presentation data zipped by index with the translated arrays in i18n.ts
+  const scoreColors = [
+    { color: "#ea580c" },
+    { color: "#eab308" },
+    { color: "#fef08a", border: true },
+    { color: "#d1d5db" },
+    { color: "#e5e7eb" },
+  ];
+  const variableIcons = ["⚡", "☁", "☀", "🌡"];
+  const tierColors = ["bg-orange-500", "bg-yellow-400", "bg-gray-300"];
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
       onClick={onClose}>
@@ -499,7 +519,7 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
         {/* Header */}
         <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-border">
-          <h2 className="text-base font-bold text-foreground">Solara Index</h2>
+          <h2 className="text-base font-bold text-foreground">{a.title}</h2>
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground transition-colors">
             <X size={18} />
           </button>
@@ -510,27 +530,21 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
           {/* Score labels */}
           <div>
-            <h3 className="font-semibold text-foreground mb-1">Score labels</h3>
+            <h3 className="font-semibold text-foreground mb-1">{a.scoreLabelsTitle}</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-              Each daylight hour is scored 0–100. The score reflects the big star’s potential to power Superman and normal people.
+              {a.scoreLabelsIntro}
             </p>
             <div className="flex flex-col gap-2.5">
-              {[
-                { label: "Prime sun",  range: "80–100", color: "#ea580c", desc: "Everything aligned. Peak radiation, strong UV, warm, low wind. The star is performing. Rare outside summer." },
-                { label: "Good sun",   range: "65–79",  color: "#eab308", desc: "Solid across all variables. This is what you came for." },
-                { label: "Fair sun",   range: "45–64",  color: "#fef08a", border: true, desc: "Something is holding it back — cold air, partial cloud, or wind. Still worth it." },
-                { label: "Weak sun",   range: "25–44",  color: "#d1d5db", desc: "Marginal. A clear January noon or a warm overcast afternoon. The star is trying." },
-                { label: "No sun",     range: "0–24",   color: "#e5e7eb", desc: "Overcast, rainy, or night. Nothing to score here." },
-              ].map(s => (
-                <div key={s.label} className="flex items-start gap-3">
+              {a.scoreLabels.map((sl, i) => (
+                <div key={sl.label} className="flex items-start gap-3">
                   <span className="w-2.5 h-2.5 rounded-full shrink-0 mt-1"
-                    style={{ backgroundColor: s.color, border: s.border ? '1px solid #ca8a04' : undefined }} />
+                    style={{ backgroundColor: scoreColors[i].color, border: scoreColors[i].border ? '1px solid #ca8a04' : undefined }} />
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-xs font-semibold text-foreground">{s.label}</span>
-                      <span className="text-xs text-muted-foreground font-mono">{s.range}</span>
+                      <span className="text-xs font-semibold text-foreground">{sl.label}</span>
+                      <span className="text-xs text-muted-foreground font-mono">{sl.range}</span>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{s.desc}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">{sl.desc}</p>
                   </div>
                 </div>
               ))}
@@ -539,35 +553,18 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
           {/* How the score is built */}
           <div>
-            <h3 className="font-semibold text-foreground mb-1">How the score is built</h3>
+            <h3 className="font-semibold text-foreground mb-1">{a.howBuiltTitle}</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-              Four variables add up, then wind scales the result. The star provides the inputs. Wind decides if you’ll stay long enough to benefit.
+              {a.howBuiltIntro}
             </p>
             <div className="flex flex-col gap-3">
-              {[
-                {
-                  name: "Solar radiation", weight: "45 pts", icon: "⚡",
-                  detail: "Direct W/m² reaching the ground. The heaviest term — it physically encodes cloud conditions and sun angle. Above 500 W/m² a saturation curve applies, compressing the top end so peak summer doesn't dominate."
-                },
-                {
-                  name: "Cloud cover", weight: "15 pts", icon: "☁",
-                  detail: "Lower weight than radiation — cloud’s effect is already in the radiation number. This term catches the partial coverage radiation misses."
-                },
-                {
-                  name: "UV index", weight: "15 pts", icon: "☀",
-                  detail: "Scored 0–10. When the forecast API returns nothing, Solara estimates it from radiation and solar angle with a seasonal factor."
-                },
-                {
-                  name: "Feels-like temperature", weight: "25 pts", icon: "🌡",
-                  detail: "Below 10°C the term is zero — not because the star stopped, but because normal people won’t expose enough skin to benefit. Superman is unaffected."
-                },
-              ].map(v => (
+              {a.variables.map((v, i) => (
                 <div key={v.name} className="flex items-start gap-3">
-                  <div className="w-8 text-center text-base shrink-0 mt-0.5">{v.icon}</div>
+                  <div className="w-8 text-center text-base shrink-0 mt-0.5">{variableIcons[i]}</div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-baseline gap-2 mb-0.5">
                       <span className="text-xs font-semibold text-foreground">{v.name}</span>
-                      <span className="text-xs text-muted-foreground">max {v.weight}</span>
+                      <span className="text-xs text-muted-foreground">{a.maxLabel} {v.weight}</span>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">{v.detail}</p>
                   </div>
@@ -578,20 +575,14 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
             {/* Wind multiplier */}
             <div className="mt-4 bg-muted/40 rounded-xl p-3">
               <div className="flex items-baseline gap-2 mb-2">
-                <span className="text-xs font-semibold text-foreground">🌬 Wind multiplier</span>
-                <span className="text-xs text-muted-foreground">scales the entire base score</span>
+                <span className="text-xs font-semibold text-foreground">{a.windTitle}</span>
+                <span className="text-xs text-muted-foreground">{a.windSub}</span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-                Wind doesn't block UV — but it determines whether you'll actually stay outside.
-                The multiplier is continuous, not stepped: penalties increase smoothly with speed.
+                {a.windBody}
               </p>
               <div className="flex flex-col gap-1">
-                {[
-                  { range: "≤ 15 km/h",  label: "No penalty",   mult: "×1.0", note: "Calm to gentle breeze. Beaufort 0–3." },
-                  { range: "15–30 km/h", label: "Mild penalty",  mult: "×1.0→0.7", note: "Moderate breeze. Noticeable but manageable." },
-                  { range: "30–50 km/h", label: "Strong penalty",mult: "×0.7→0.4", note: "Fresh to strong breeze. Extended stays unlikely." },
-                  { range: "> 50 km/h",  label: "Severe",        mult: "×0.3", note: "Near gale. Most people will not stay out." },
-                ].map(r => (
+                {a.windRows.map(r => (
                   <div key={r.range} className="flex items-center gap-2 text-xs">
                     <span className="font-mono text-muted-foreground w-20 shrink-0">{r.range}</span>
                     <span className="font-semibold text-foreground w-12 shrink-0">{r.mult}</span>
@@ -604,36 +595,27 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
 
           {/* Corrections */}
           <div>
-            <h3 className="font-semibold text-foreground mb-1">Automatic corrections</h3>
+            <h3 className="font-semibold text-foreground mb-1">{a.correctionsTitle}</h3>
             <p className="text-xs text-muted-foreground leading-relaxed mb-3">
-              Weather models have known blind spots. Solara corrects for three of them, automatically.
+              {a.correctionsIntro}
             </p>
             <div className="flex flex-col gap-4">
 
               <div>
-                <div className="text-xs font-semibold text-foreground mb-0.5">Nortada wind (IPCJ)</div>
+                <div className="text-xs font-semibold text-foreground mb-0.5">{a.nortadaTitle}</div>
                 <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-                  ERA5 — the model behind Open-Meteo — runs at ~31 km resolution and
-                  systematically underestimates the Iberian Coastal Low-Level Jet (the Nortada),
-                  a persistent northerly along Portugal's Atlantic coast present on ~70% of summer days,
-                  with model underestimates of 7–14 km/h at the coast.
-                  (Soares et al., 2014; DIVA-Portal 2014)
+                  {a.nortadaP1}
                 </p>
                 <p className="text-xs text-muted-foreground leading-relaxed mb-2">
-                  Solara classifies each location automatically and multiplies the reported wind
-                  before scoring. The corrected value appears as{' '}
-                  <span className="text-orange-500 font-medium">IPCJ: xx km/h</span> in each hour row
-                  and in the accuracy board.
+                  {a.nortadaP2a}
+                  <span className="text-orange-500 font-medium">IPCJ: xx km/h</span>
+                  {a.nortadaP2b}
                 </p>
                 {/* Location tiers */}
                 <div className="flex flex-col gap-1 mb-2">
-                  {[
-                    { tier: 'High exposure', color: 'bg-orange-500', desc: 'West-Atlantic-facing beaches directly in the jet path: Costa Vicentina, Nazaré, Figueira, Costa Nova, Praia de Mira, Costa da Caparica, Guincho, Ofir, Matosinhos.' },
-                    { tier: 'Medium exposure', color: 'bg-yellow-400', desc: 'Partially sheltered: Arrábida, Sesimbra, Tróia, southwest tip (Sagres area).' },
-                    { tier: 'No correction', color: 'bg-gray-300', desc: 'Algarve south coast, Madeira, Açores, inland locations.' },
-                  ].map(t => (
+                  {a.tiers.map((t, i) => (
                     <div key={t.tier} className="flex items-start gap-2">
-                      <span className={`w-2 h-2 rounded-full shrink-0 mt-1 ${t.color}`} />
+                      <span className={`w-2 h-2 rounded-full shrink-0 mt-1 ${tierColors[i]}`} />
                       <div className="text-xs text-muted-foreground leading-relaxed">
                         <span className="font-semibold text-foreground">{t.tier} — </span>{t.desc}
                       </div>
@@ -645,21 +627,14 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-border">
-                        <th className="text-left px-2 py-1.5 font-semibold text-foreground">Season</th>
-                        <th className="text-left px-2 py-1.5 font-semibold text-foreground">Hours</th>
-                        <th className="text-center px-2 py-1.5 font-semibold text-orange-600">High</th>
-                        <th className="text-center px-2 py-1.5 font-semibold text-yellow-600">Medium</th>
+                        <th className="text-left px-2 py-1.5 font-semibold text-foreground">{a.tableSeason}</th>
+                        <th className="text-left px-2 py-1.5 font-semibold text-foreground">{a.tableHours}</th>
+                        <th className="text-center px-2 py-1.5 font-semibold text-orange-600">{a.tableHigh}</th>
+                        <th className="text-center px-2 py-1.5 font-semibold text-yellow-600">{a.tableMedium}</th>
                       </tr>
                     </thead>
                     <tbody className="text-muted-foreground">
-                      {[
-                        { season: 'Jun–Sep', hours: '13h–20h', high: '×1.40', med: '×1.25' },
-                        { season: 'Jun–Sep', hours: '07h–12h', high: '×1.15', med: '×1.10' },
-                        { season: 'Jun–Sep', hours: 'other',    high: '×1.10', med: '×1.05' },
-                        { season: 'Apr–May, Oct', hours: '13h–20h', high: '×1.20', med: '×1.12' },
-                        { season: 'Apr–May, Oct', hours: 'other',    high: '×1.10', med: '×1.05' },
-                        { season: 'Nov–Mar', hours: 'any',      high: '×1.05', med: '×1.02' },
-                      ].map((r, i) => (
+                      {a.tableRows.map((r, i) => (
                         <tr key={i} className="border-b border-border/50 last:border-0">
                           <td className="px-2 py-1">{r.season}</td>
                           <td className="px-2 py-1 font-mono">{r.hours}</td>
@@ -673,19 +648,16 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-foreground mb-0.5">Radiation saturation</div>
+                <div className="text-xs font-semibold text-foreground mb-0.5">{a.saturationTitle}</div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  600 vs 750 W/m² feels the same to a normal person. A linear model over-rewards peak summer. Above 500 W/m² Solara compresses the range with a square-root curve, so 800 W/m² maps to ~680 effective W/m².
+                  {a.saturationBody}
                 </p>
               </div>
 
               <div>
-                <div className="text-xs font-semibold text-foreground mb-0.5">UV fallback estimate</div>
+                <div className="text-xs font-semibold text-foreground mb-0.5">{a.uvFallbackTitle}</div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Open-Meteo's forecast API sometimes returns null UV. When that happens, Solara
-                  estimates UV from direct radiation using a zenith-angle weight (peaks at solar noon)
-                  and a seasonal efficiency factor — summer ozone over Iberia is thinner,
-                  yielding more UV per W/m².
+                  {a.uvFallbackBody}
                 </p>
               </div>
             </div>
@@ -694,9 +666,9 @@ function AboutPanel({ onClose }: { onClose: () => void }) {
           {/* Data source */}
           <div className="border-t border-border pt-4">
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Weather data from <span className="text-foreground font-medium">Open-Meteo</span> (ERA5-backed forecast and archive APIs).
-              Location search via <span className="text-foreground font-medium">Nominatim / OpenStreetMap</span>.
-              Wind correction: Soares et al., 2014, Univ. Lisbon; DIVA-Portal IPCJ Climatology, 2014.
+              {a.dataSource1}<span className="text-foreground font-medium">Open-Meteo</span>
+              {a.dataSource2}<span className="text-foreground font-medium">Nominatim / OpenStreetMap</span>
+              {a.dataSource3}
             </p>
           </div>
         </div>
@@ -713,6 +685,7 @@ function FavouritesBar({
   onSelect: (lat: number, lon: number, name: string) => void;
   onSaveCurrent: () => void;
 }) {
+  const { s } = useLang();
   const qc = useQueryClient();
   const { data: favs = [] } = useQuery<Favourite[]>({
     queryKey: ['/api/favourites'],
@@ -739,7 +712,7 @@ function FavouritesBar({
             border border-dashed border-amber-400 text-amber-600 dark:text-amber-400
             hover:bg-amber-50 dark:hover:bg-amber-900/20 transition-colors"
         >
-          <Star size={11} />Save {current.name}
+          <Star size={11} />{s.save} {current.name}
         </button>
       )}
 
@@ -771,11 +744,12 @@ function FavouritesBar({
 
 // ── Accuracy Section ──────────────────────────────────────────────
 function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: number; units: UnitSystem; ipcjExposure: IpcjExposure }) {
+  const { s, lang, locale } = useLang();
   const [open, setOpen] = useState(false);
 
   const { data: rows, isLoading, isError } = useQuery<DayAccuracy[]>({
-    queryKey: ['accuracy', lat, lon],
-    queryFn: () => fetchActualScores(lat, lon),
+    queryKey: ['accuracy', lat, lon, lang],
+    queryFn: () => fetchActualScores(lat, lon, locale),
     enabled: open,
     staleTime: 1000 * 60 * 60,
     retry: 1,
@@ -804,14 +778,14 @@ function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: 
         className="flex items-center gap-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
       >
         <Sun size={14} />
-        Forecast accuracy — past 7 days
+        {s.accuracyTitle}
         {open ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </button>
 
       {open && (
         <div className="flex flex-col gap-2">
           {isLoading && <Skeleton className="h-40 rounded-xl" />}
-          {isError && <p className="text-xs text-muted-foreground">Could not load historical data.</p>}
+          {isError && <p className="text-xs text-muted-foreground">{s.accuracyError}</p>}
           {rows && rows.length > 0 && (
             <div className="flex flex-col gap-2">
               {rows.map(row => {
@@ -831,11 +805,11 @@ function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: 
                         <span className="text-[10px] text-muted-foreground">{row.date}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="text-muted-foreground">best hour: {hourLabel}</span>
+                        <span className="text-muted-foreground">{s.bestHour} {hourLabel}</span>
                         <span className="text-muted-foreground">·</span>
-                        <span className="text-muted-foreground">forecast <span className={scoreColor(h.fScore)}>{h.fScore}</span></span>
+                        <span className="text-muted-foreground">{s.forecast} <span className={scoreColor(h.fScore)}>{h.fScore}</span></span>
                         <span className="text-muted-foreground">→</span>
-                        <span className="text-muted-foreground">actual <span className={scoreColor(h.aScore)}>{h.aScore}</span></span>
+                        <span className="text-muted-foreground">{s.actual} <span className={scoreColor(h.aScore)}>{h.aScore}</span></span>
                         <span className={`font-semibold text-[10px] ${scoreDColor}`}>{scoreDStr}</span>
                       </div>
                     </div>
@@ -846,27 +820,27 @@ function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: 
                       const fWindIpcj = Math.round(h.fWind * ipcjFactor);
                       const hasIpcj = ipcjFactor > 1.0;
                       const cols = [
-                        { label: '⚡ Rad',   f: `${h.fRad}`,            a: `${h.aRad}`,            d: delta(h.aRad, h.fRad) },
-                        { label: '☁ Cloud', f: `${h.fCloud}%`,          a: `${h.aCloud}%`,          d: delta(h.aCloud, h.fCloud, true) },
-                        { label: '☀ UV',    f: `${h.fUV}`,             a: `${h.aUV}`,             d: delta(h.aUV, h.fUV) },
-                        { label: '🌡 Temp', f: fmtTemp(h.fTemp, units), a: fmtTemp(h.aTemp, units), d: delta(h.aTemp, h.fTemp) },
+                        { label: s.colRad,   f: `${h.fRad}`,            a: `${h.aRad}`,            d: delta(h.aRad, h.fRad) },
+                        { label: s.colCloud, f: `${h.fCloud}%`,          a: `${h.aCloud}%`,          d: delta(h.aCloud, h.fCloud, true) },
+                        { label: s.colUV,    f: `${h.fUV}`,             a: `${h.aUV}`,             d: delta(h.aUV, h.fUV) },
+                        { label: s.colTemp, f: fmtTemp(h.fTemp, units), a: fmtTemp(h.aTemp, units), d: delta(h.aTemp, h.fTemp) },
                       ];
                       return (
                         <div className="grid text-[10px]" style={{ gridTemplateColumns: `repeat(4, 1fr) ${hasIpcj ? '1.6fr' : '1fr'}` }}>
                           {cols.map(v => (
                             <div key={v.label} className="flex flex-col items-center gap-0.5 px-1 py-2 border-r border-border">
                               <span className="text-muted-foreground font-medium mb-1">{v.label}</span>
-                              <span className="text-muted-foreground/60">fcst</span>
+                              <span className="text-muted-foreground/60">{s.fcstShort}</span>
                               <span className="text-foreground font-medium">{v.f}</span>
-                              <span className="text-muted-foreground/60 mt-1">actual</span>
+                              <span className="text-muted-foreground/60 mt-1">{s.actualShort}</span>
                               <span className="text-foreground font-medium">{v.a}</span>
                               <span className="mt-1">{v.d}</span>
                             </div>
                           ))}
                           {/* Wind — expanded to show raw + IPCJ */}
                           <div className="flex flex-col items-center gap-0.5 px-1 py-2">
-                            <span className="text-muted-foreground font-medium mb-1">🌬 Wind</span>
-                            <span className="text-muted-foreground/60">fcst</span>
+                            <span className="text-muted-foreground font-medium mb-1">{s.colWind}</span>
+                            <span className="text-muted-foreground/60">{s.fcstShort}</span>
                             <span className="text-foreground font-medium">{fmtWind(h.fWind, units)}</span>
                             {hasIpcj && (
                               <>
@@ -874,7 +848,7 @@ function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: 
                                 <span className="text-orange-500 font-medium">{fmtWind(fWindIpcj, units)}</span>
                               </>
                             )}
-                            <span className="text-muted-foreground/60 mt-1">actual</span>
+                            <span className="text-muted-foreground/60 mt-1">{s.actualShort}</span>
                             <span className="text-foreground font-medium">{fmtWind(h.aWind, units)}</span>
                             <span className="mt-1">{delta(h.aWind, h.fWind, true)}</span>
                           </div>
@@ -885,7 +859,7 @@ function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: 
                 );
               })}
               <p className="text-[10px] text-muted-foreground/50 text-center">
-                Forecast: Open-Meteo forecast model · Actual: ERA5 reanalysis archive · Delta = actual − forecast
+                {s.accuracyFootnote}
               </p>
             </div>
           )}
@@ -898,6 +872,7 @@ function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: 
 
 // ── Main App ──────────────────────────────────────────────────────
 export default function Home() {
+  const { s, lang, locale } = useLang();
   const [location, setLocation] = useState<{ lat: number; lon: number; name: string } | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
   const [units, setUnits] = useState<UnitSystem>('metric');
@@ -937,8 +912,8 @@ export default function Home() {
   }, [location?.lat, location?.lon]);
 
   const { data, isLoading, isError, refetch } = useQuery<SunForecast>({
-    queryKey: ['sun', location?.lat, location?.lon, ipcjExposure],
-    queryFn: () => fetchSunForecast(location!.lat, location!.lon, location!.name, ipcjExposure),
+    queryKey: ['sun', location?.lat, location?.lon, ipcjExposure, lang],
+    queryFn: () => fetchSunForecast(location!.lat, location!.lon, location!.name, ipcjExposure, locale),
     enabled: !!location,
     staleTime: 1000 * 60 * 30,
     retry: 1,
@@ -993,12 +968,13 @@ export default function Home() {
           </div>
           <div className="flex items-center gap-3">
 
+            <LangToggle />
             <button
               data-testid="btn-toggle-units"
               onClick={toggleUnits}
               className="text-xs font-medium text-muted-foreground hover:text-foreground
                 transition-colors px-2 py-1 rounded-lg hover:bg-accent"
-              title="Toggle units"
+              title={s.toggleUnits}
             >
               {units === 'metric' ? '°C' : '°F'}
             </button>
@@ -1006,10 +982,10 @@ export default function Home() {
               data-testid="btn-about"
               onClick={() => setAboutOpen(true)}
               className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
-              title="About the score"
+              title={s.aboutScore}
             >
               <Info size={14} />
-              <span className="hidden sm:inline">Solara Index</span>
+              <span className="hidden sm:inline">{s.solaraIndex}</span>
             </button>
             <button
               data-testid="btn-change-location"
@@ -1043,9 +1019,9 @@ export default function Home() {
         {isError && (
           <div className="text-center py-12 flex flex-col items-center gap-3">
             <AlertCircle className="text-destructive" size={32} />
-            <p className="text-sm text-muted-foreground">Could not load weather data.</p>
+            <p className="text-sm text-muted-foreground">{s.loadError}</p>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <RefreshCw size={14} className="mr-1.5" />Try again
+              <RefreshCw size={14} className="mr-1.5" />{s.tryAgain}
             </Button>
           </div>
         )}
@@ -1077,9 +1053,9 @@ export default function Home() {
       </main>
 
       <footer className="border-t py-3 px-6 text-xs text-muted-foreground flex flex-wrap justify-between gap-2">
-        <span>Weather: <a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">Open-Meteo</a> (CC BY 4.0)</span>
+        <span>{s.weatherLabel} <a href="https://open-meteo.com" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">Open-Meteo</a> (CC BY 4.0)</span>
         <a href="https://www.perplexity.ai/computer" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:text-foreground">
-          Created with Perplexity Computer
+          {s.createdWith}
         </a>
       </footer>
     </div>
