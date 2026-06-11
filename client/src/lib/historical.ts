@@ -19,8 +19,7 @@ export interface HourDetail {
 }
 
 export interface DayAccuracy {
-  date: string;       // yyyy-mm-dd
-  weekday: string;
+  date: string;       // yyyy-mm-dd — weekday is formatted at render time
   bestHour: HourDetail;
 }
 
@@ -33,8 +32,7 @@ function fmt(d: Date) { return d.toISOString().slice(0, 10); }
  */
 export async function fetchActualScores(
   lat: number,
-  lon: number,
-  locale: string = 'en-GB'
+  lon: number
 ): Promise<DayAccuracy[]> {
   const today = new Date();
   const end = new Date(today);
@@ -89,7 +87,6 @@ export async function fetchActualScores(
 
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dateStr = fmt(d);
-    const weekday = d.toLocaleDateString(locale, { weekday: 'short' });
 
     // Collect all daylight hours with actual scores
     const hours: Array<{ hour: number; aScore: number }> = [];
@@ -153,7 +150,6 @@ export async function fetchActualScores(
 
     results.push({
       date: dateStr,
-      weekday,
       bestHour: { hour: bh, fRad, fCloud, fUV, fTemp, fWind, fScore, aRad, aCloud, aUV, aTemp, aWind, aScore },
     });
   }

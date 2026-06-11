@@ -4,12 +4,9 @@ import {
   fetchSunForecast,
   reverseGeocode,
   searchCity,
-  scoreLabel,
   scoreColor,
   scoreBg,
   hourBarColor,
-  bestWindow,
-  THRESHOLDS,
   type DayData,
   type HourData,
   type SunForecast,
@@ -22,9 +19,10 @@ import { fmtTemp, fmtWind, type UnitSystem } from "@/lib/units";
 import { fetchActualScores, type DayAccuracy } from "@/lib/historical";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Badge } from "@/components/ui/badge";
-import { apiRequest } from "@/lib/queryClient";
-import type { Favourite } from "@/lib/localStore";
+import {
+  getFavourites, addFavourite, removeFavourite,
+  getPref, setPref, type Favourite,
+} from "@/lib/localStore";
 import { useLang, LangToggle } from "@/lib/i18n";
 import {
   MapPin, Sun, Thermometer, Cloud, Wind,
@@ -166,10 +164,13 @@ function DayCard({ day, locationName, units, ipcjExposure }: {
   units: UnitSystem;
   ipcjExposure: IpcjExposure;
 }) {
-  const { s } = useLang();
+  const { s, locale } = useLang();
   const [expanded, setExpanded] = useState(false);
   const bg = scoreBg(day.dayScore);
   const dayHours = day.hours.filter(h => h.isDay);
+  const d = new Date(day.date + 'T12:00:00');
+  const weekday = d.toLocaleDateString(locale, { weekday: 'short' });
+  const dateLabel = d.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
 
   return (
     <div className="border border-border rounded-2xl overflow-hidden transition-all bg-card">
@@ -182,9 +183,9 @@ function DayCard({ day, locationName, units, ipcjExposure }: {
         {/* Date */}
         <div className="flex flex-col gap-0 shrink-0 w-10">
           <div className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider leading-tight">
-            {day.isToday ? s.today : day.weekday}
+            {day.isToday ? s.today : weekday}
           </div>
-          <div className="text-xs font-medium text-foreground leading-tight">{day.dateLabel}</div>
+          <div className="text-xs font-medium text-foreground leading-tight">{dateLabel}</div>
         </div>
 
         {/* Bar chart — fills remaining width */}
@@ -213,29 +214,6 @@ function DayCard({ day, locationName, units, ipcjExposure }: {
 
         </div>
       )}
-    </div>
-  );
-}
-
-// ── Week Summary Bar ──────────────────────────────────────────────
-function WeekSummary({ days }: { days: DayData[] }) {
-  const best = [...days].sort((a, b) => b.dayScore - a.dayScore)[0];
-  const goodDays = days.filter(d => d.dayScore >= 65).length;
-  const avgScore = Math.round(days.reduce((s, d) => s + d.dayScore, 0) / days.length);
-
-  return (
-    <div className="grid grid-cols-3 gap-3">
-      {[
-        { label: "Best day", value: `${best.isToday ? 'Today' : best.weekday} · ${best.dateLabel}`, sub: `Score ${best.dayScore}` },
-        { label: "Quality sun days", value: `${goodDays} / ${days.length}`, sub: "Score ≥ 65" },
-        { label: "Week avg", value: `${avgScore} / 100`, sub: scoreLabel(avgScore) },
-      ].map(item => (
-        <div key={item.label} className="bg-card border border-border rounded-xl p-3 text-center">
-          <div className="text-xs text-muted-foreground mb-1">{item.label}</div>
-          <div className="text-sm font-semibold text-foreground">{item.value}</div>
-          <div className="text-xs text-muted-foreground">{item.sub}</div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -294,7 +272,7 @@ function IntroScreen({ onDone }: { onDone: () => void }) {
 
 // ── Location Gate ─────────────────────────────────────────────────
 function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: number, name: string) => void; onAbout: () => void }) {
-  const { s } = useLang();
+  const { s, lang } = useLang();
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<GeoResult[]>([]);
   const [searching, setSearching] = useState(false);
@@ -308,12 +286,12 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
     if (query.trim().length < 2) { setResults([]); return; }
     debounceRef.current = setTimeout(async () => {
       setSearching(true);
-      const res = await searchCity(query);
+      const res = await searchCity(query, lang);
       setResults(res);
       setSearching(false);
     }, 350);
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
-  }, [query]);
+  }, [query, lang]);
 
   const requestGPS = useCallback(() => {
     setGpsLoading(true);
@@ -465,7 +443,8 @@ function LocationGate({ onLocation, onAbout }: { onLocation: (lat: number, lon: 
 function FavouritesList({ onSelect }: { onSelect: (lat: number, lon: number, name: string) => void }) {
   const { s } = useLang();
   const { data: favs = [] } = useQuery<Favourite[]>({
-    queryKey: ['/api/favourites'],
+    queryKey: ['favourites'],
+    queryFn: () => getFavourites(),
     staleTime: 0,
   });
 
@@ -688,13 +667,14 @@ function FavouritesBar({
   const { s } = useLang();
   const qc = useQueryClient();
   const { data: favs = [] } = useQuery<Favourite[]>({
-    queryKey: ['/api/favourites'],
+    queryKey: ['favourites'],
+    queryFn: () => getFavourites(),
     staleTime: 0,
   });
 
   const removeMutation = useMutation({
-    mutationFn: (id: number) => apiRequest('DELETE', `/api/favourites/${id}`),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['/api/favourites'] }),
+    mutationFn: async (id: number) => removeFavourite(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourites'] }),
   });
 
   const isSaved = favs.some(f => Math.abs(f.lat - current.lat) < 0.001 && Math.abs(f.lon - current.lon) < 0.001);
@@ -744,12 +724,12 @@ function FavouritesBar({
 
 // ── Accuracy Section ──────────────────────────────────────────────
 function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: number; units: UnitSystem; ipcjExposure: IpcjExposure }) {
-  const { s, lang, locale } = useLang();
+  const { s, locale } = useLang();
   const [open, setOpen] = useState(false);
 
   const { data: rows, isLoading, isError } = useQuery<DayAccuracy[]>({
-    queryKey: ['accuracy', lat, lon, lang],
-    queryFn: () => fetchActualScores(lat, lon, locale),
+    queryKey: ['accuracy', lat, lon],
+    queryFn: () => fetchActualScores(lat, lon),
     enabled: open,
     staleTime: 1000 * 60 * 60,
     retry: 1,
@@ -790,6 +770,7 @@ function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: 
             <div className="flex flex-col gap-2">
               {rows.map(row => {
                 const h = row.bestHour;
+                const weekday = new Date(row.date + 'T12:00:00').toLocaleDateString(locale, { weekday: 'short' });
                 const hourLabel = `${String(h.hour).padStart(2, '0')}:00`;
                 const scoreD = h.aScore - h.fScore;
                 const scoreDStr = scoreD === 0 ? '—' : (scoreD > 0 ? `+${scoreD}` : `${scoreD}`);
@@ -801,7 +782,7 @@ function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: 
                     {/* Header: date + best hour + score comparison */}
                     <div className="flex items-center justify-between px-3 py-2 bg-muted/30 border-b border-border">
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold text-foreground">{row.weekday}</span>
+                        <span className="text-xs font-semibold text-foreground">{weekday}</span>
                         <span className="text-[10px] text-muted-foreground">{row.date}</span>
                       </div>
                       <div className="flex items-center gap-2 text-xs">
@@ -872,36 +853,20 @@ function AccuracySection({ lat, lon, units, ipcjExposure }: { lat: number; lon: 
 
 // ── Main App ──────────────────────────────────────────────────────
 export default function Home() {
-  const { s, lang, locale } = useLang();
+  const { s } = useLang();
   const [location, setLocation] = useState<{ lat: number; lon: number; name: string } | null>(null);
   const [aboutOpen, setAboutOpen] = useState(false);
-  const [units, setUnits] = useState<UnitSystem>('metric');
-  const [introDone, setIntroDone] = useState<boolean | null>(null);
+  // Preferences are read synchronously from localStorage — no loading state needed
+  const [units, setUnits] = useState<UnitSystem>(() =>
+    getPref('units') === 'imperial' ? 'imperial' : 'metric');
+  const [introDone, setIntroDone] = useState<boolean>(() => getPref('intro_done') === '1');
   const [ipcjExposure, setIpcjExposure] = useState<IpcjExposure>('none');
   const qc = useQueryClient();
-
-  // Load saved preferences on mount
-  const { data: unitsPref } = useQuery<{ value: string | null }>({
-    queryKey: ['/api/prefs/units'],
-    staleTime: Infinity,
-  });
-  const { data: introPref } = useQuery<{ value: string | null }>({
-    queryKey: ['/api/prefs/intro_done'],
-    staleTime: Infinity,
-  });
-  useEffect(() => {
-    if (unitsPref?.value === 'imperial') setUnits('imperial');
-  }, [unitsPref]);
-  useEffect(() => {
-    if (introPref !== undefined) {
-      setIntroDone(introPref?.value === '1');
-    }
-  }, [introPref]);
 
   const toggleUnits = useCallback(() => {
     const next: UnitSystem = units === 'metric' ? 'imperial' : 'metric';
     setUnits(next);
-    apiRequest('POST', '/api/prefs/units', { value: next });
+    setPref('units', next);
   }, [units]);
 
   // Auto-classify IPCJ exposure whenever location changes — fully automatic
@@ -912,29 +877,26 @@ export default function Home() {
   }, [location?.lat, location?.lon]);
 
   const { data, isLoading, isError, refetch } = useQuery<SunForecast>({
-    queryKey: ['sun', location?.lat, location?.lon, ipcjExposure, lang],
-    queryFn: () => fetchSunForecast(location!.lat, location!.lon, location!.name, ipcjExposure, locale),
+    queryKey: ['sun', location?.lat, location?.lon, ipcjExposure],
+    queryFn: () => fetchSunForecast(location!.lat, location!.lon, location!.name, ipcjExposure),
     enabled: !!location,
     staleTime: 1000 * 60 * 30,
     retry: 1,
   });
 
   const saveFavouriteMutation = useMutation({
-    mutationFn: () => apiRequest('POST', '/api/favourites', {
+    mutationFn: async () => addFavourite({
       name: location!.name,
       lat: location!.lat,
       lon: location!.lon,
     }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['/api/favourites'] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['favourites'] }),
   });
-
-  // Still loading prefs — show nothing to avoid flash
-  if (introDone === null) return null;
 
   if (!introDone) {
     return <IntroScreen onDone={() => {
       setIntroDone(true);
-      apiRequest('POST', '/api/prefs/intro_done', { value: '1' });
+      setPref('intro_done', '1');
     }} />;
   }
 

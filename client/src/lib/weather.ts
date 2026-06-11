@@ -13,14 +13,11 @@ export interface HourData {
 }
 
 export interface DayData {
-  date: string;           // "2024-06-15"
-  weekday: string;        // "Mon"
-  dateLabel: string;      // "15 Jun"
+  date: string;           // "2024-06-15" — weekday/date labels are formatted at render time
   isToday: boolean;
   sunrise: string;        // "06:23"
   sunset: string;         // "20:45"
   dayScore: number;       // 0–100
-  scoreLabel: string;
   peakWindow: { start: string; end: string; score: number } | null;
   hours: HourData[];
 }
@@ -199,8 +196,7 @@ export async function fetchSunForecast(
   lat: number,
   lon: number,
   locationName: string,
-  ipcjExposure: import('./corrections').IpcjExposure = 'none',
-  locale: string = 'en-GB'
+  ipcjExposure: import('./corrections').IpcjExposure = 'none'
 ): Promise<SunForecast> {
   const url = new URL('https://api.open-meteo.com/v1/forecast');
   url.searchParams.set('latitude', lat.toString());
@@ -265,11 +261,13 @@ export async function fetchSunForecast(
     dayMap.get(date)!.push({ ...hBase, sunScore });
   });
 
-  const today = new Date().toISOString().slice(0, 10);
+  // "Today" by the location's clock, not UTC — Open-Meteo dates are in the
+  // location's timezone, so shift now() by the reported UTC offset.
+  const offsetSec: number = data.utc_offset_seconds ?? 0;
+  const today = new Date(Date.now() + offsetSec * 1000).toISOString().slice(0, 10);
 
   const days: DayData[] = daily.time.map((date: string, i: number) => {
     const hours = dayMap.get(date) ?? [];
-    const d = new Date(date + 'T12:00:00');
     const dayHours = hours.filter(h => h.isDay);
 
     const dayScore = calcDayScore(hours);
@@ -277,13 +275,10 @@ export async function fetchSunForecast(
 
     return {
       date,
-      weekday: d.toLocaleDateString(locale, { weekday: 'short' }),
-      dateLabel: d.toLocaleDateString(locale, { day: 'numeric', month: 'short' }),
       isToday: date === today,
       sunrise: parseTime(daily.sunrise[i]),
       sunset: parseTime(daily.sunset[i]),
       dayScore,
-      scoreLabel: scoreLabel(dayScore),
       peakWindow: peak,
       hours,
     };
@@ -292,7 +287,7 @@ export async function fetchSunForecast(
   return { locationName, lat, lon, days };
 }
 
-// Reverse geocode using Open-Meteo geocoding API
+// Reverse geocode using Nominatim (Open-Meteo's geocoder has no reverse endpoint)
 export async function reverseGeocode(lat: number, lon: number): Promise<string> {
   try {
     const url = `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`;
@@ -314,17 +309,44 @@ export interface GeoResult {
   displayName?: string; // full OSM display string for disambiguation
 }
 
-export async function searchCity(query: string): Promise<GeoResult[]> {
+export async function searchCity(query: string, lang: string = 'en'): Promise<GeoResult[]> {
   if (!query.trim()) return [];
-  // Nominatim covers hamlets, villages, streets — full OSM address database
+  // Open-Meteo geocoding first: fast, CORS-friendly, localized names.
+  // Nominatim as fallback — it covers hamlets and streets Open-Meteo misses.
+  try {
+    const omUrl = new URL('https://geocoding-api.open-meteo.com/v1/search');
+    omUrl.searchParams.set('name', query.trim());
+    omUrl.searchParams.set('count', '6');
+    omUrl.searchParams.set('language', lang);
+    omUrl.searchParams.set('format', 'json');
+    const omRes = await fetch(omUrl.toString());
+    if (omRes.ok) {
+      const om = await omRes.json();
+      if (om.results?.length) {
+        return (om.results as any[]).map((r: any) => ({
+          name: r.name,
+          lat: r.latitude,
+          lon: r.longitude,
+          country: r.country ?? '',
+          admin1: r.admin1 ?? '',
+        }));
+      }
+    }
+  } catch {
+    // fall through to Nominatim
+  }
+  return searchCityNominatim(query, lang);
+}
+
+async function searchCityNominatim(query: string, lang: string): Promise<GeoResult[]> {
   const url = new URL('https://nominatim.openstreetmap.org/search');
   url.searchParams.set('q', query.trim());
   url.searchParams.set('format', 'json');
   url.searchParams.set('addressdetails', '1');
   url.searchParams.set('limit', '6');
-  url.searchParams.set('accept-language', 'en');
+  url.searchParams.set('accept-language', lang);
   const res = await fetch(url.toString(), {
-    headers: { 'Accept-Language': 'en' }
+    headers: { 'Accept-Language': lang }
   });
   if (!res.ok) return [];
   const data = await res.json();
