@@ -82,12 +82,12 @@ function windFactor(ws: number): number {
 // Beach-comfort curve (feels-like °C → 0–25 pts), not "hotter is better":
 //   ≤ 10°C  → 0     (can't expose skin)
 //   10–25°C → 0–8   (shallow ramp — unlikely beach weather)
-//   25–35°C → 8–25  (the meaningful band — 30 beats 25, 35 beats 30)
-//   ≥ 35°C  → 25    (flat — hotter is neither better nor worse)
+//   25–30°C → 8–25  (the meaningful band — every degree counts sharply)
+//   ≥ 30°C  → 25    (flat — hotter is neither better nor worse)
 function tempTermScore(t: number): number {
   if (t <= 10) return 0;
   if (t <= 25) return ((t - 10) / (25 - 10)) * 8;
-  if (t <= 35) return 8 + ((t - 25) / (35 - 25)) * 17;
+  if (t <= 30) return 8 + ((t - 25) / (30 - 25)) * 17;
   return 25;
 }
 
