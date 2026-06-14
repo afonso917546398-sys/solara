@@ -78,6 +78,19 @@ function windFactor(ws: number): number {
   return 0.3;
 }
 
+// ── Temperature term ─────────────────────────────────────────────────
+// Beach-comfort curve (feels-like °C → 0–25 pts), not "hotter is better":
+//   ≤ 10°C  → 0     (can't expose skin)
+//   10–25°C → 0–8   (shallow ramp — unlikely beach weather)
+//   25–35°C → 8–25  (the meaningful band — 30 beats 25, 35 beats 30)
+//   ≥ 35°C  → 25    (flat — hotter is neither better nor worse)
+function tempTermScore(t: number): number {
+  if (t <= 10) return 0;
+  if (t <= 25) return ((t - 10) / (25 - 10)) * 8;
+  if (t <= 35) return 8 + ((t - 25) / (35 - 25)) * 17;
+  return 25;
+}
+
 // ── Main scoring function ──────────────────────────────────────────────
 export function calcHourScore(h: Omit<HourData, 'sunScore'>): number {
   // Night — always 0
@@ -90,12 +103,8 @@ export function calcHourScore(h: Omit<HourData, 'sunScore'>): number {
     h.weatherCode >= 95;
   if (badWeather) return 0;
 
-  // ── 1. temp_term: apparentTemp 10–40°C → 0–25 pts ───────────────
-  // Linear. Below 10°C = 0 (can't expose skin). Above 40°C = capped at 25.
-  // No hard disqualification — cold just scores low, not zero.
-  const tempTerm = Math.max(0, Math.min(25,
-    ((h.apparentTemp - 10) / (40 - 10)) * 25
-  ));
+  // ── 1. temp_term: feels-like → 0–25 pts via beach-comfort curve ──
+  const tempTerm = tempTermScore(h.apparentTemp);
 
   // ── 2. sun_term: directRadiation 0–800 W/m² → 0–45 pts ─────────
   // Raised from 35→45 pts. Radiation already encodes cloud conditions
